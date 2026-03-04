@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"import uuid\" /e/nw/quality-service/app/models/*.py)",
+      "Bash(grep -n \"ondelete\\\\|ForeignKey\" /e/nw/quality-service/app/models/*.py)",
+      "Bash(grep -n \"onupdate\" /e/nw/quality-service/app/models/*.py)",
+      "Bash(grep -n \"datetime.utcnow\" /e/nw/quality-service/app/*.py /e/nw/quality-service/app/*/*.py)"
+    ]
+  }
+}

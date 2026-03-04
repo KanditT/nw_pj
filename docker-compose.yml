@@ -1,0 +1,245 @@
+version: "3.8"
+
+x-erpnext-image: &erpnext_image
+  image: frappe/erpnext:v15.45.0
+
+x-depends-on-configurator: &depends_on_configurator
+  depends_on:
+    configurator:
+      condition: service_completed_successfully
+
+x-backend-defaults: &backend_defaults
+  <<: [*erpnext_image, *depends_on_configurator]
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+
+networks:
+  quality-network:
+    driver: bridge
+
+volumes:
+  sites:
+  db-data:
+  quality-db-data:
+
+services:
+
+  # ─────────────────────────────────────────
+  # ERPNext Infrastructure
+  # ─────────────────────────────────────────
+
+  db:
+    image: mariadb:10.6
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-admin}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--password=${DB_ROOT_PASSWORD:-admin}"]
+      interval: 5s
+      retries: 20
+    networks:
+      - quality-network
+
+  redis-cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - quality-network
+
+  redis-queue:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - quality-network
+
+  configurator:
+    <<: *erpnext_image
+    restart: "no"
+    entrypoint: [bash, -c]
+    command:
+      - |
+        ls -1 apps > sites/apps.txt;
+        bench set-config -g db_host db;
+        bench set-config -gp db_port 3306;
+        bench set-config -g redis_cache "redis://redis-cache:6379";
+        bench set-config -g redis_queue "redis://redis-queue:6379";
+        bench set-config -g redis_socketio "redis://redis-queue:6379";
+        bench set-config -gp socketio_port 9000;
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - quality-network
+
+  create-site:
+    <<: *erpnext_image
+    restart: "no"
+    entrypoint: [bash, -c]
+    command:
+      - |
+        wait-for-it -t 120 db:3306;
+        wait-for-it -t 120 redis-cache:6379;
+        wait-for-it -t 120 redis-queue:6379;
+        start=$$(date +%s);
+        until [ -n "$$(grep -hs ^ sites/common_site_config.json | python -c "import sys,json;print(json.load(sys.stdin).get('db_host',''))" 2>/dev/null)" ]; do
+          echo "Waiting for common_site_config.json...";
+          sleep 5;
+          if [ $$(($$(date +%s)-start)) -gt 120 ]; then echo "Timeout"; exit 1; fi;
+        done;
+        if [ ! -f "sites/${SITE_NAME:-quality.localhost}/site_config.json" ]; then
+          bench new-site \
+            --no-mariadb-socket \
+            --admin-password=${SITE_ADMIN_PASSWORD:-admin} \
+            --db-root-password=${DB_ROOT_PASSWORD:-admin} \
+            --install-app erpnext \
+            --set-default \
+            ${SITE_NAME:-quality.localhost};
+          bench --site ${SITE_NAME:-quality.localhost} set-config -p socketio_port 9000;
+          bench --site ${SITE_NAME:-quality.localhost} set-maintenance-mode off;
+          echo "Site created successfully.";
+        else
+          echo "Site already exists, skipping.";
+        fi
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+    environment:
+      SITE_NAME: ${SITE_NAME:-quality.localhost}
+      SITE_ADMIN_PASSWORD: ${SITE_ADMIN_PASSWORD:-admin}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-admin}
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+    networks:
+      - quality-network
+
+  backend:
+    <<: *backend_defaults
+    restart: unless-stopped
+    environment:
+      FRAPPE_SITE_NAME_HEADER: ${SITE_NAME:-quality.localhost}
+    networks:
+      - quality-network
+
+  websocket:
+    <<: *backend_defaults
+    restart: unless-stopped
+    command: node /home/frappe/frappe-bench/apps/frappe/socketio.js
+    networks:
+      - quality-network
+
+  queue-short:
+    <<: *backend_defaults
+    restart: unless-stopped
+    command: bench worker --queue short,default
+    networks:
+      - quality-network
+
+  queue-long:
+    <<: *backend_defaults
+    restart: unless-stopped
+    command: bench worker --queue long,default,short
+    networks:
+      - quality-network
+
+  scheduler:
+    <<: *backend_defaults
+    restart: unless-stopped
+    command: bench schedule
+    networks:
+      - quality-network
+
+  frontend:
+    <<: *erpnext_image
+    restart: unless-stopped
+    environment:
+      BACKEND: backend:8000
+      FRAPPE_SITE_NAME_HEADER: ${SITE_NAME:-quality.localhost}
+      SOCKETIO: websocket:9000
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: "120"
+      CLIENT_MAX_BODY_SIZE: "50m"
+    command: nginx-entrypoint.sh
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+    ports:
+      - "${ERPNEXT_PORT:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_started
+      create-site:
+        condition: service_completed_successfully
+    networks:
+      - quality-network
+
+  # ─────────────────────────────────────────
+  # Quality Service (FastAPI)
+  # ─────────────────────────────────────────
+
+  quality-db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${QUALITY_DB_NAME:-quality_db}
+      POSTGRES_USER: ${QUALITY_DB_USER:-quality}
+      POSTGRES_PASSWORD: ${QUALITY_DB_PASSWORD:-quality123}
+    volumes:
+      - quality-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${QUALITY_DB_USER:-quality} -d ${QUALITY_DB_NAME:-quality_db}"]
+      interval: 5s
+      retries: 10
+    networks:
+      - quality-network
+
+  quality-service:
+    build:
+      context: ./quality-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${QUALITY_DB_USER:-quality}:${QUALITY_DB_PASSWORD:-quality123}@quality-db:5432/${QUALITY_DB_NAME:-quality_db}
+      ERPNEXT_URL: http://frontend:8080
+      ERPNEXT_API_KEY: ${ERPNEXT_API_KEY:-}
+      ERPNEXT_API_SECRET: ${ERPNEXT_API_SECRET:-}
+      ERPNEXT_SITE: ${SITE_NAME:-quality.localhost}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      CORS_ORIGINS: '["http://localhost:3000","http://quality-ui:3000","http://localhost:8080"]'
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-webhook-secret}
+    ports:
+      - "${QUALITY_SERVICE_PORT:-8000}:8000"
+    depends_on:
+      quality-db:
+        condition: service_healthy
+    networks:
+      - quality-network
+
+  # ─────────────────────────────────────────
+  # Quality UI (Next.js + shadCN)
+  # ─────────────────────────────────────────
+
+  quality-ui:
+    build:
+      context: ./quality-ui
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:${QUALITY_SERVICE_PORT:-8000}
+      NEXT_PUBLIC_ERPNEXT_URL: http://localhost:${ERPNEXT_PORT:-8080}
+      INTERNAL_API_URL: http://quality-service:8000
+    ports:
+      - "${QUALITY_UI_PORT:-3000}:3000"
+    depends_on:
+      - quality-service
+    networks:
+      - quality-network

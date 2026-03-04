@@ -1,0 +1,144 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:QualityClient.ViewModels"
+        x:Class="QualityClient.Views.MainWindow"
+        Title="Quality Client — Inspection &amp; Approval"
+        Width="1200" Height="750"
+        WindowStartupLocation="CenterScreen">
+
+  <DockPanel>
+    <!-- Sidebar -->
+    <Border DockPanel.Dock="Left" Width="180" Background="#1e293b" Padding="0,16">
+      <StackPanel Spacing="4">
+        <TextBlock Text="Quality" FontSize="18" FontWeight="Bold"
+                   Foreground="White" Margin="16,0,0,8" />
+        <TextBlock Text="Inspection &amp; Approval" FontSize="11"
+                   Foreground="#94a3b8" Margin="16,0,0,16" />
+
+        <Button Content="Approvals" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left" Margin="8,0"
+                Padding="12,8" Background="Transparent" Foreground="White"
+                Command="{Binding LoadApprovalsCommand}" />
+        <Button Content="Inspections" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left" Margin="8,0"
+                Padding="12,8" Background="Transparent" Foreground="White"
+                Command="{Binding LoadInspectionsCommand}" />
+        <Button Content="Audit Trail" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left" Margin="8,0"
+                Padding="12,8" Background="Transparent" Foreground="White"
+                Command="{Binding LoadAuditLogsCommand}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Status Bar -->
+    <Border DockPanel.Dock="Bottom" Background="#f1f5f9" Padding="12,6">
+      <DockPanel>
+        <ProgressBar DockPanel.Dock="Right" IsIndeterminate="{Binding IsLoading}"
+                     Width="120" Height="4" IsVisible="{Binding IsLoading}" />
+        <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="#64748b" />
+      </DockPanel>
+    </Border>
+
+    <!-- Main Content -->
+    <ScrollViewer Padding="24">
+      <StackPanel Spacing="16">
+
+        <!-- Approvals Panel -->
+        <StackPanel IsVisible="{Binding CurrentPage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <TextBlock Text="{Binding CurrentPage}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16" />
+
+          <!-- Approval Queue -->
+          <Grid ColumnDefinitions="*,300" IsVisible="{Binding CurrentPage, StringFormat={}{0}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <ListBox Grid.Column="0" ItemsSource="{Binding Approvals}"
+                     SelectedItem="{Binding SelectedApproval}"
+                     IsVisible="{Binding CurrentPage, StringFormat=Approvals}">
+              <ListBox.ItemTemplate>
+                <DataTemplate DataType="vm:ApprovalRequestDto">
+                  <Border Padding="12" CornerRadius="6" Background="#f8fafc" Margin="0,2">
+                    <StackPanel Spacing="4">
+                      <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Priority}"
+                                   FontSize="11" Foreground="#64748b" />
+                        <TextBlock Text="{Binding Status}" FontWeight="SemiBold" FontSize="13" />
+                      </DockPanel>
+                      <TextBlock Text="{Binding RequestedBy}" FontSize="12" Foreground="#475569" />
+                      <TextBlock Text="{Binding Notes}" FontSize="11" Foreground="#94a3b8"
+                                 IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Decision Panel -->
+            <Border Grid.Column="1" Margin="16,0,0,0" Padding="16"
+                    Background="#f8fafc" CornerRadius="8"
+                    IsVisible="{Binding SelectedApproval, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <StackPanel Spacing="12">
+                <TextBlock Text="Decision" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock Text="Your Name" FontSize="12" Foreground="#475569" />
+                <TextBox Text="{Binding CurrentUser}" />
+                <TextBlock Text="Comments" FontSize="12" Foreground="#475569" />
+                <TextBox Text="{Binding DecisionComments}" AcceptsReturn="True" Height="80" />
+                <Button Content="Approve" HorizontalAlignment="Stretch"
+                        Background="#16a34a" Foreground="White"
+                        Command="{Binding ApproveCommand}" />
+                <Button Content="Reject" HorizontalAlignment="Stretch"
+                        Background="#dc2626" Foreground="White"
+                        Command="{Binding RejectCommand}" />
+              </StackPanel>
+            </Border>
+
+            <!-- Inspections List -->
+            <ListBox Grid.Column="0" Grid.ColumnSpan="2"
+                     ItemsSource="{Binding Inspections}"
+                     SelectedItem="{Binding SelectedInspection}"
+                     IsVisible="{Binding CurrentPage, StringFormat=Inspections}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border Padding="12" CornerRadius="6" Background="#f8fafc" Margin="0,2">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Right" Text="{Binding Status}"
+                                 FontWeight="SemiBold" Foreground="#3b82f6" />
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding ItemCode}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding InspectionType}" FontSize="12" Foreground="#64748b" />
+                        <TextBlock Text="{Binding CreatedBy}" FontSize="11" Foreground="#94a3b8" />
+                      </StackPanel>
+                    </DockPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Audit Log List -->
+            <ListBox Grid.Column="0" Grid.ColumnSpan="2"
+                     ItemsSource="{Binding AuditLogs}"
+                     IsVisible="{Binding CurrentPage, StringFormat=Audit}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border Padding="10" CornerRadius="4" Background="#f8fafc" Margin="0,1">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Right" Text="{Binding Result}"
+                                 FontSize="11" Foreground="#64748b" />
+                      <StackPanel Spacing="2">
+                        <DockPanel>
+                          <TextBlock Text="{Binding Actor}" FontWeight="SemiBold" FontSize="12" />
+                          <TextBlock Text=" · " FontSize="12" Foreground="#94a3b8" />
+                          <TextBlock Text="{Binding Action}" FontSize="12" />
+                        </DockPanel>
+                        <TextBlock Text="{Binding ResourceType}" FontSize="11" Foreground="#94a3b8" />
+                        <TextBlock Text="{Binding Timestamp}" FontSize="10" Foreground="#cbd5e1" />
+                      </StackPanel>
+                    </DockPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </StackPanel>
+
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

@@ -1,0 +1,40 @@
+# Environment
+.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node.js
+node_modules/
+.next/
+quality-ui/.next/
+quality-ui/node_modules/
+
+# .NET / Avalonia
+quality-avalonia/*/bin/
+quality-avalonia/*/obj/
+*.user
+
+# Docker volumes (if accidentally created locally)
+sites/
+db-data/
+quality-db-data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log

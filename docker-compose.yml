@@ -2,6 +2,7 @@ version: "3.8"
 
 x-erpnext-image: &erpnext_image
   image: frappe/erpnext:v15.45.0
+  platform: linux/amd64
 
 x-depends-on-configurator: &depends_on_configurator
   depends_on:
@@ -23,7 +24,6 @@ volumes:
   quality-db-data:
 
 services:
-
   # ─────────────────────────────────────────
   # ERPNext Infrastructure
   # ─────────────────────────────────────────
@@ -41,7 +41,15 @@ services:
     volumes:
       - db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--password=${DB_ROOT_PASSWORD:-admin}"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "--password=${DB_ROOT_PASSWORD:-admin}",
+        ]
       interval: 5s
       retries: 20
     networks:
@@ -196,7 +204,11 @@ services:
     volumes:
       - quality-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${QUALITY_DB_USER:-quality} -d ${QUALITY_DB_NAME:-quality_db}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${QUALITY_DB_USER:-quality} -d ${QUALITY_DB_NAME:-quality_db}",
+        ]
       interval: 5s
       retries: 10
     networks:

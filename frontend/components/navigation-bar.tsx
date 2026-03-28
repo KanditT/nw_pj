@@ -31,8 +31,10 @@ import {
 } from "@/components/ui/sidebar";
 import { MENU } from "@/config/navigation-menu";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const NavigationBar = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname();
   return (
     <div className="flex min-h-dvh w-full">
       <SidebarProvider>
@@ -64,7 +66,7 @@ const NavigationBar = ({ children }: { children: React.ReactNode }) => {
                 <SidebarMenu>
                   {MENU.map((item) => (
                     <SidebarMenuItem key={item.name}>
-                      <SidebarMenuButton asChild>
+                      <SidebarMenuButton asChild isActive={pathname === item.href}>
                         <Link href={item.href}>
                           <item.icon />
                           <span>{item.name}</span>

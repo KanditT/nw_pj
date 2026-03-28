@@ -107,6 +107,46 @@ def get_item(name: str):
 
 
 # -----------------------------
+# 🧪 MOCK UP DATA
+# -----------------------------
+MOCK_ITEMS = [
+    {"item_code": "BOLT-M8-SS",    "item_name": "Stainless Bolt M8",       "item_group": "Raw Material"},
+    {"item_code": "PIPE-50-GI",    "item_name": "Galvanized Iron Pipe 50mm","item_group": "Raw Material"},
+    {"item_code": "VALVE-GATE-2",  "item_name": "Gate Valve 2 inch",        "item_group": "Raw Material"},
+    {"item_code": "CABLE-NYY-4C",  "item_name": "NYY Cable 4 Core",         "item_group": "Raw Material"},
+    {"item_code": "PUMP-CENT-3HP", "item_name": "Centrifugal Pump 3HP",     "item_group": "Products"},
+    {"item_code": "MOTOR-AC-5HP",  "item_name": "AC Motor 5HP 380V",        "item_group": "Products"},
+    {"item_code": "FILTER-BAG-25", "item_name": "Bag Filter 25 Micron",     "item_group": "Consumable"},
+    {"item_code": "GLOVE-NITR-L",  "item_name": "Nitrile Glove Size L",     "item_group": "Consumable"},
+    {"item_code": "GAUGE-PRES-60", "item_name": "Pressure Gauge 0-60 PSI",  "item_group": "Products"},
+    {"item_code": "SEAL-ORING-25", "item_name": "O-Ring Seal 25mm",         "item_group": "Raw Material"},
+]
+
+@router.post("/mock-up-data")
+def mock_up_data():
+    results = []
+    for item in MOCK_ITEMS:
+        try:
+            payload = {
+                "doctype": domain,
+                "item_code": item["item_code"],
+                "item_name": item["item_name"],
+                "item_group": item["item_group"],
+                "stock_uom": "Nos",
+                "inspection_required_before_purchase": 1,
+            }
+            res = requests.post(
+                f"{FRAPPE_URL}/api/resource/{domain}",
+                json=payload,
+                headers=HEADERS
+            )
+            results.append({"item_code": item["item_code"], "status": "ok"})
+        except Exception as e:
+            results.append({"item_code": item["item_code"], "status": "error", "detail": str(e)})
+    return {"results": results}
+
+
+# -----------------------------
 # ➕ CREATE inspection
 # -----------------------------
 @router.post("")

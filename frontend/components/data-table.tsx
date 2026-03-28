@@ -45,8 +45,6 @@ export function DataTable<TData, TValue>({
 
   function handleChaneRowPerPage(value: number) {
     changeRowPerPage(value);
-    console.log("value", value);
-    
   }
 
   function handleChangePaginate(page: number) {

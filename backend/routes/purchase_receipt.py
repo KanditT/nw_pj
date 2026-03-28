@@ -76,6 +76,79 @@ def get_purchase_receipt(name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/mock-up-data")
+def mock_up_data():
+    import datetime, random
+
+    # fetch first company
+    company_res = requests.get(
+        f"{FRAPPE_URL}/api/resource/Company",
+        headers=HEADERS,
+        params={"limit_page_length": 1}
+    )
+    companies = company_res.json().get("data", [])
+    company = companies[0]["name"] if companies else ""
+
+    # fetch suppliers
+    sup_res = requests.get(
+        f"{FRAPPE_URL}/api/resource/Supplier",
+        headers=HEADERS,
+        params={"limit_page_length": 20}
+    )
+    suppliers = [s["name"] for s in sup_res.json().get("data", [])]
+    if not suppliers:
+        return {"error": "No suppliers found. Please add suppliers first."}
+
+    # fetch items
+    item_res = requests.get(
+        f"{FRAPPE_URL}/api/resource/Item",
+        headers=HEADERS,
+        params={"limit_page_length": 50, "fields": json.dumps(["name"])}
+    )
+    items = [i["name"] for i in item_res.json().get("data", [])]
+    if not items:
+        return {"error": "No items found. Please add items first."}
+
+    today = datetime.date.today()
+    results = []
+
+    for i in range(10):
+        post_date = today - datetime.timedelta(days=random.randint(0, 30))
+        supplier = suppliers[i % len(suppliers)]
+        picked_items = random.sample(items, min(2, len(items)))
+
+        payload = {
+            "doctype": domain,
+            "naming_series": "MAT-PRE-.YYYY.-",
+            "supplier": supplier,
+            "company": company,
+            "currency": "THB",
+            "conversion_rate": 1.00,
+            "posting_date": post_date.strftime("%Y-%m-%d"),
+            "posting_time": f"{random.randint(8,17):02d}:{random.randint(0,59):02d}:00",
+            "items": [
+                {
+                    "doctype": "Purchase Receipt Item",
+                    "item_code": item,
+                    "qty": random.randint(1, 50),
+                    "rate": round(random.uniform(100, 5000), 2),
+                }
+                for item in picked_items
+            ],
+        }
+        try:
+            res = requests.post(
+                f"{FRAPPE_URL}/api/resource/{domain}",
+                json=payload,
+                headers=HEADERS
+            )
+            results.append({"index": i + 1, "status": "ok"})
+        except Exception as e:
+            results.append({"index": i + 1, "status": "error", "detail": str(e)})
+
+    return {"results": results}
+
+
 @router.post("")
 def create_purchase_receipt(data: dict):
     try:

@@ -30,7 +30,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface ItemGroup {
@@ -75,7 +79,11 @@ interface ItemGroupComboboxProps {
   onChange: (value: string) => void;
 }
 
-function ItemGroupCombobox({ value, itemGroups, onChange }: ItemGroupComboboxProps) {
+function ItemGroupCombobox({
+  value,
+  itemGroups,
+  onChange,
+}: ItemGroupComboboxProps) {
   const [comboOpen, setComboOpen] = useState(false);
   return (
     <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -110,12 +118,14 @@ function ItemGroupCombobox({ value, itemGroups, onChange }: ItemGroupComboboxPro
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === group.name ? "opacity-100" : "opacity-0"
+                      value === group.name ? "opacity-100" : "opacity-0",
                     )}
                   />
                   <div className="flex flex-col">
                     <span className="font-medium">{group.name}</span>
-                    <span className="text-xs text-primary">{group.parent_item_group}</span>
+                    <span className="text-xs text-primary">
+                      {group.parent_item_group}
+                    </span>
                   </div>
                 </CommandItem>
               ))}
@@ -143,13 +153,18 @@ const Page = () => {
   // Add dialog
   const [addOpen, setAddOpen] = useState(false);
   const [formData, setFormData] = useState<ItemFormData>(defaultFormData);
-  const [errors, setErrors] = useState<Partial<Record<keyof ItemFormData, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof ItemFormData, string>>
+  >({});
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
   const [editItemCode, setEditItemCode] = useState("");
-  const [editFormData, setEditFormData] = useState<EditFormData>(defaultEditFormData);
-  const [editErrors, setEditErrors] = useState<Partial<Record<keyof EditFormData, string>>>({});
+  const [editFormData, setEditFormData] =
+    useState<EditFormData>(defaultEditFormData);
+  const [editErrors, setEditErrors] = useState<
+    Partial<Record<keyof EditFormData, string>>
+  >({});
 
   async function fetchData() {
     try {
@@ -176,7 +191,7 @@ const Page = () => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}item-groups`,
       );
       setItemGroups(response.data.data);
-    } catch(err) {
+    } catch (err) {
       console.error("Failed to fetch item groups:", err);
       setItemGroups([]);
     }
@@ -184,7 +199,6 @@ const Page = () => {
 
   useEffect(() => {
     fetchItemGroups();
-    console.log(process.env.NEXT_PUBLIC_API_BASE_URL);
   }, []);
 
   useEffect(() => {
@@ -355,7 +369,10 @@ const Page = () => {
             <DialogHeader>
               <DialogTitle>Edit Item</DialogTitle>
               <DialogDescription>
-                Editing: <span className="font-medium text-foreground">{editItemCode}</span>
+                Editing:{" "}
+                <span className="font-medium text-foreground">
+                  {editItemCode}
+                </span>
               </DialogDescription>
             </DialogHeader>
             <FieldGroup>
@@ -384,7 +401,10 @@ const Page = () => {
                   itemGroups={itemGroups}
                   onChange={(value) => {
                     setEditFormData((prev) => ({ ...prev, item_group: value }));
-                    setEditErrors((prev) => ({ ...prev, item_group: undefined }));
+                    setEditErrors((prev) => ({
+                      ...prev,
+                      item_group: undefined,
+                    }));
                   }}
                 />
                 <FieldError>{editErrors.item_group}</FieldError>
@@ -404,7 +424,9 @@ const Page = () => {
             </FieldGroup>
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
               </DialogClose>
               <Button type="submit">Save changes</Button>
             </DialogFooter>
@@ -428,65 +450,103 @@ const Page = () => {
             className="max-w-sm"
           />
 
-          {/* ── Add Dialog ────────────────────────────────────────────── */}
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">Add Item</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-sm">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>Add Item</DialogTitle>
-                  <DialogDescription>
-                    Fill in the item details below. Click save when you&apos;re done.
-                  </DialogDescription>
-                </DialogHeader>
-                <FieldGroup>
-                  <Field>
-                    <Label htmlFor="item_code">
-                      Item Code <span className="text-destructive">*</span>
-                    </Label>
-                    <Input id="item_code" name="item_code" value={formData.item_code} onChange={handleChange} />
-                    <FieldError>{errors.item_code}</FieldError>
-                  </Field>
-                  <Field>
-                    <Label htmlFor="item_name">
-                      Item Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input id="item_name" name="item_name" value={formData.item_name} onChange={handleChange} />
-                    <FieldError>{errors.item_name}</FieldError>
-                  </Field>
-                  <Field>
-                    <Label>
-                      Item Group <span className="text-destructive">*</span>
-                    </Label>
-                    <ItemGroupCombobox
-                      value={formData.item_group}
-                      itemGroups={itemGroups}
-                      onChange={(value) => {
-                        setFormData((prev) => ({ ...prev, item_group: value }));
-                        setErrors((prev) => ({ ...prev, item_group: undefined }));
-                      }}
-                    />
-                    <FieldError>{errors.item_group}</FieldError>
-                  </Field>
-                  <Field>
-                    <Label htmlFor="stock_uom">
-                      Stock UOM <span className="text-destructive">*</span>
-                    </Label>
-                    <Input id="stock_uom" name="stock_uom" value={formData.stock_uom} onChange={handleChange} />
-                    <FieldError>{errors.stock_uom}</FieldError>
-                  </Field>
-                </FieldGroup>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button type="submit">Save changes</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                await axios.post(
+                  `${process.env.NEXT_PUBLIC_API_BASE_URL}items/mock-up-data`,
+                );
+                fetchData();
+              }}
+            >
+              Mock Up Data
+            </Button>
+
+            {/* ── Add Dialog ────────────────────────────────────────────── */}
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">Add Item</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-sm">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>Add Item</DialogTitle>
+                    <DialogDescription>
+                      Fill in the item details below. Click save when
+                      you&apos;re done.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <FieldGroup>
+                    <Field>
+                      <Label htmlFor="item_code">
+                        Item Code <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="item_code"
+                        name="item_code"
+                        value={formData.item_code}
+                        onChange={handleChange}
+                      />
+                      <FieldError>{errors.item_code}</FieldError>
+                    </Field>
+                    <Field>
+                      <Label htmlFor="item_name">
+                        Item Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="item_name"
+                        name="item_name"
+                        value={formData.item_name}
+                        onChange={handleChange}
+                      />
+                      <FieldError>{errors.item_name}</FieldError>
+                    </Field>
+                    <Field>
+                      <Label>
+                        Item Group <span className="text-destructive">*</span>
+                      </Label>
+                      <ItemGroupCombobox
+                        value={formData.item_group}
+                        itemGroups={itemGroups}
+                        onChange={(value) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            item_group: value,
+                          }));
+                          setErrors((prev) => ({
+                            ...prev,
+                            item_group: undefined,
+                          }));
+                        }}
+                      />
+                      <FieldError>{errors.item_group}</FieldError>
+                    </Field>
+                    <Field>
+                      <Label htmlFor="stock_uom">
+                        Stock UOM <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="stock_uom"
+                        name="stock_uom"
+                        value={formData.stock_uom}
+                        onChange={handleChange}
+                      />
+                      <FieldError>{errors.stock_uom}</FieldError>
+                    </Field>
+                  </FieldGroup>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button type="submit">Save changes</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </DataTable>
     </div>

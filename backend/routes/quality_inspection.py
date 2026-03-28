@@ -11,11 +11,16 @@ HEADERS = {
 }
 
 router = APIRouter()
-domain = "Quality Inspection Parameter"
+domain = "Quality Inspection"
+
+SUBMIT_HEADERS = {
+    **HEADERS,
+    "Content-Type": "application/json",
+}
 
 
 @router.get("")
-def get_parameters(
+def get_quality_inspections(
     keyword: str = Query(None),
     page_size: int = Query(10),
     current_page: int = Query(1)
@@ -25,7 +30,7 @@ def get_parameters(
         start = (current_page - 1) * page_size
 
         params = {
-            "fields": json.dumps(["name"]),
+            "fields": json.dumps(["name", "status", "report_date", "item_code", "inspected_by"]),
             "limit_page_length": page_size,
             "limit_start": start
         }
@@ -63,54 +68,31 @@ def get_parameters(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/all")
-def get_all_parameters():
-    """Used by comboboxes — returns full list without pagination."""
+@router.get("/{name}")
+def get_quality_inspection(name: str):
     try:
         res = requests.get(
-            f"{FRAPPE_URL}/api/resource/{domain}",
-            headers=HEADERS,
-            params={"limit_page_length": 500}
+            f"{FRAPPE_URL}/api/resource/{domain}/{name}",
+            headers=HEADERS
         )
         return res.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-MOCK_PARAMETERS = [
-    "Dimension",
-    "Surface Finish",
-    "Hardness",
-    "Tensile Strength",
-    "Chemical Composition",
-    "Visual Inspection",
-    "Weight",
-    "Corrosion Resistance",
-    "Pressure Test",
-    "Electrical Conductivity",
-]
-
-@router.post("/mock-up-data")
-def mock_up_data():
-    results = []
-    for param in MOCK_PARAMETERS:
-        try:
-            payload = {"doctype": domain, "parameter": param}
-            res = requests.post(
-                f"{FRAPPE_URL}/api/resource/{domain}",
-                json=payload,
-                headers=HEADERS
-            )
-            results.append({"parameter": param, "status": "ok"})
-        except Exception as e:
-            results.append({"parameter": param, "status": "error", "detail": str(e)})
-    return {"results": results}
-
-
 @router.post("")
-def create_parameter(data: dict):
+def create_quality_inspection(data: dict):
     try:
-        payload = {"doctype": domain, **data}
+        raw_readings = data.pop("readings", [])
+        readings = [{"doctype": "Quality Inspection Reading", **r} for r in raw_readings]
+
+        payload = {
+            "doctype": domain,
+            "docstatus": 1,
+            "readings": readings,
+            **data
+        }
+
         res = requests.post(
             f"{FRAPPE_URL}/api/resource/{domain}",
             json=payload,
@@ -120,8 +102,42 @@ def create_parameter(data: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.put("/{name}")
+def update_quality_inspection(name: str, data: dict):
+    try:
+        raw_readings = data.pop("readings", None)
+        if raw_readings is not None:
+            data["readings"] = [
+                {"doctype": "Quality Inspection Reading", **r} for r in raw_readings
+            ]
+
+        res = requests.put(
+            f"{FRAPPE_URL}/api/resource/{domain}/{name}",
+            json=data,
+            headers=HEADERS
+        )
+        return res.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{name}/cancel")
+def cancel_quality_inspection(name: str):
+    try:
+        # Set docstatus=2 (cancelled) via PUT
+        res = requests.put(
+            f"{FRAPPE_URL}/api/resource/{domain}/{name}",
+            json={"docstatus": 2},
+            headers=HEADERS
+        )
+        return res.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/{name}")
-def delete_parameter(name: str):
+def delete_quality_inspection(name: str):
     try:
         res = requests.delete(
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",

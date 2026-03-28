@@ -79,6 +79,36 @@ def get_supplier(name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+MOCK_SUPPLIERS = [
+    {"supplier_name": "Thai Steel Co., Ltd.",       "supplier_type": "Company"},
+    {"supplier_name": "Bangkok Pipe Supply",         "supplier_type": "Company"},
+    {"supplier_name": "Sirichai Engineering",        "supplier_type": "Company"},
+    {"supplier_name": "Pro-Parts Thailand",          "supplier_type": "Company"},
+    {"supplier_name": "Eastern Valve & Fitting",     "supplier_type": "Company"},
+    {"supplier_name": "Nakorn Electric Co.",         "supplier_type": "Company"},
+    {"supplier_name": "Somchai Industrial Parts",    "supplier_type": "Individual"},
+    {"supplier_name": "Wanchai Rubber & Seal",       "supplier_type": "Individual"},
+    {"supplier_name": "PTT Lubricants Partnership",  "supplier_type": "Partnership"},
+    {"supplier_name": "Rayong Filter & Gasket",      "supplier_type": "Company"},
+]
+
+@router.post("/mock-up-data")
+def mock_up_data():
+    results = []
+    for s in MOCK_SUPPLIERS:
+        try:
+            payload = {"doctype": domain, **s}
+            res = requests.post(
+                f"{FRAPPE_URL}/api/resource/{domain}",
+                json=payload,
+                headers=HEADERS
+            )
+            results.append({"supplier_name": s["supplier_name"], "status": "ok"})
+        except Exception as e:
+            results.append({"supplier_name": s["supplier_name"], "status": "error", "detail": str(e)})
+    return {"results": results}
+
+
 @router.post("")
 def create_supplier(data: dict):
     try:

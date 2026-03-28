@@ -85,6 +85,13 @@ type PRFormData = {
 
 const defaultRow = (): ItemRowForm => ({ item_code: "", qty: "1", rate: "0" });
 
+// "0:13:46.478961" → "00:13:46",  "18:04:44.306927" → "18:04:44"
+function normalizeTime(t: string): string {
+  const base = t.split(".")[0]; // strip microseconds
+  const parts = base.split(":");
+  return parts.map((p) => p.padStart(2, "0")).join(":");
+}
+
 function getNow() {
   const now = new Date();
   const date = now.toLocaleDateString("en-CA"); // YYYY-MM-DD
@@ -380,12 +387,13 @@ const Page = () => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}purchase-receipts/${name}`,
       );
       const pr = response.data.data;
+      
       setEditName(pr.name);
       setEditFormData({
         naming_series: pr.naming_series ?? "",
         supplier: pr.supplier ?? "",
         posting_date: pr.posting_date ?? "",
-        posting_time: (pr.posting_time ?? "").slice(0, 8),
+        posting_time: normalizeTime(pr.posting_time ?? ""),
         items:
           (pr.items ?? []).map((item: { item_code?: string; qty?: number; rate?: number }) => ({
             item_code: item.item_code ?? "",
@@ -733,6 +741,17 @@ const Page = () => {
           />
 
           {/* ── Add Dialog ────────────────────────────────────────────── */}
+          <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}purchase-receipts/mock-up-data`);
+              fetchData();
+            }}
+          >
+            Mock Up Data
+          </Button>
+
           <Dialog
             open={addOpen}
             onOpenChange={(open) => {
@@ -781,6 +800,7 @@ const Page = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </DataTable>
     </div>

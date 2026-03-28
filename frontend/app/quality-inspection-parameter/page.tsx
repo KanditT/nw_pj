@@ -25,12 +25,12 @@ import { Label } from "@/components/ui/label";
 // ── Schema ───────────────────────────────────────────────────────────────────
 
 const paramSchema = z.object({
-  parameter_name: z.string().min(1, "Parameter Name is required"),
+  parameter: z.string().min(1, "Parameter Name is required"),
 });
 
 type ParamFormData = z.infer<typeof paramSchema>;
 
-const defaultFormData: ParamFormData = { parameter_name: "" };
+const defaultFormData: ParamFormData = { parameter: "" };
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -109,7 +109,7 @@ const Page = () => {
       setAddOpen(false);
       fetchData();
     } catch {
-      setErrors({ parameter_name: "Failed to create parameter. Please try again." });
+      setErrors({ parameter: "Failed to create parameter. Please try again." });
     }
   }
 
@@ -172,6 +172,17 @@ const Page = () => {
           />
 
           {/* ── Add Dialog ────────────────────────────────────────────── */}
+          <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspection-parameters/mock-up-data`);
+              fetchData();
+            }}
+          >
+            Mock Up Data
+          </Button>
+
           <Dialog
             open={addOpen}
             onOpenChange={(open) => {
@@ -195,17 +206,17 @@ const Page = () => {
                 </DialogHeader>
                 <FieldGroup>
                   <Field>
-                    <Label htmlFor="parameter_name">
+                    <Label htmlFor="parameter">
                       Parameter Name <span className="text-destructive">*</span>
                     </Label>
                     <Input
-                      id="parameter_name"
-                      value={formData.parameter_name}
+                      id="parameter"
+                      value={formData.parameter}
                       onChange={(e) =>
-                        setFormData({ parameter_name: e.target.value })
+                        setFormData({ parameter: e.target.value })
                       }
                     />
-                    <FieldError>{errors.parameter_name}</FieldError>
+                    <FieldError>{errors.parameter}</FieldError>
                   </Field>
                 </FieldGroup>
                 <DialogFooter>
@@ -217,6 +228,7 @@ const Page = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </DataTable>
     </div>

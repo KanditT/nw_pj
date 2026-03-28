@@ -353,6 +353,17 @@ const Page = () => {
             className="max-w-sm"
           />
 
+          <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}suppliers/mock-up-data`);
+              fetchData();
+            }}
+          >
+            Mock Up Data
+          </Button>
+
           {/* ── Add Dialog ────────────────────────────────────────────── */}
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
@@ -403,6 +414,7 @@ const Page = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </DataTable>
     </div>

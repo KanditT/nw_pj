@@ -31,7 +31,11 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -62,7 +66,9 @@ const paramRowSchema = z.object({
 });
 
 const templateSchema = z.object({
-  quality_inspection_template_name: z.string().min(1, "Template Name is required"),
+  quality_inspection_template_name: z
+    .string()
+    .min(1, "Template Name is required"),
   item_quality_inspection_parameter: z
     .array(paramRowSchema)
     .min(1, "At least one parameter is required"),
@@ -162,8 +168,11 @@ const Page = () => {
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editFormData, setEditFormData] = useState<QITFormData>(defaultFormData);
-  const [editErrors, setEditErrors] = useState<Partial<Record<string, string>>>({});
+  const [editFormData, setEditFormData] =
+    useState<QITFormData>(defaultFormData);
+  const [editErrors, setEditErrors] = useState<Partial<Record<string, string>>>(
+    {},
+  );
 
   // Create Parameter dialog (rendered at page level — not nested)
   const [createParamOpen, setCreateParamOpen] = useState(false);
@@ -226,7 +235,11 @@ const Page = () => {
 
   // ── Add ───────────────────────────────────────────────────────────────────
 
-  function updateRow(index: number, field: keyof ParameterRowForm, value: string | boolean) {
+  function updateRow(
+    index: number,
+    field: keyof ParameterRowForm,
+    value: string | boolean,
+  ) {
     setFormData((prev) => {
       const rows = [...prev.item_quality_inspection_parameter];
       rows[index] = { ...rows[index], [field]: value };
@@ -247,9 +260,8 @@ const Page = () => {
   function removeRow(index: number) {
     setFormData((prev) => ({
       ...prev,
-      item_quality_inspection_parameter: prev.item_quality_inspection_parameter.filter(
-        (_, i) => i !== index,
-      ),
+      item_quality_inspection_parameter:
+        prev.item_quality_inspection_parameter.filter((_, i) => i !== index),
     }));
   }
 
@@ -268,14 +280,17 @@ const Page = () => {
     try {
       const payload = {
         ...result.data,
-        item_quality_inspection_parameter: result.data.item_quality_inspection_parameter.map(
-          (row) => ({
+        item_quality_inspection_parameter:
+          result.data.item_quality_inspection_parameter.map((row) => ({
             specification: row.specification,
             numeric: row.numeric ? 1 : 0,
-            ...(row.minimum_value !== "" && { minimum_value: parseFloat(row.minimum_value) }),
-            ...(row.maximum_value !== "" && { maximum_value: parseFloat(row.maximum_value) }),
-          }),
-        ),
+            ...(row.minimum_value !== "" && {
+              minimum_value: parseFloat(row.minimum_value),
+            }),
+            ...(row.maximum_value !== "" && {
+              maximum_value: parseFloat(row.maximum_value),
+            }),
+          })),
       };
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspection-templates`,
@@ -286,7 +301,10 @@ const Page = () => {
       setAddOpen(false);
       fetchData();
     } catch {
-      setErrors({ quality_inspection_template_name: "Failed to create template. Please try again." });
+      setErrors({
+        quality_inspection_template_name:
+          "Failed to create template. Please try again.",
+      });
     }
   }
 
@@ -298,16 +316,26 @@ const Page = () => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspection-templates/${name}`,
       );
       const t = response.data.data;
-      
+
       setEditName(t.name);
       setEditFormData({
-        quality_inspection_template_name: t.quality_inspection_template_name ?? "",
-        item_quality_inspection_parameter: (t.item_quality_inspection_parameter ?? []).map(
-          (row: { specification?: string; numeric?: number | boolean; minimum_value?: number; maximum_value?: number }) => ({
+        quality_inspection_template_name:
+          t.quality_inspection_template_name ?? "",
+        item_quality_inspection_parameter: (
+          t.item_quality_inspection_parameter ?? []
+        ).map(
+          (row: {
+            specification?: string;
+            numeric?: number | boolean;
+            minimum_value?: number;
+            maximum_value?: number;
+          }) => ({
             specification: row.specification ?? "",
             numeric: Boolean(row.numeric),
-            minimum_value: row.minimum_value != null ? String(row.minimum_value) : "",
-            maximum_value: row.maximum_value != null ? String(row.maximum_value) : "",
+            minimum_value:
+              row.minimum_value != null ? String(row.minimum_value) : "",
+            maximum_value:
+              row.maximum_value != null ? String(row.maximum_value) : "",
           }),
         ),
       });
@@ -318,7 +346,11 @@ const Page = () => {
     }
   }
 
-  function updateEditRow(index: number, field: keyof ParameterRowForm, value: string | boolean) {
+  function updateEditRow(
+    index: number,
+    field: keyof ParameterRowForm,
+    value: string | boolean,
+  ) {
     setEditFormData((prev) => {
       const rows = [...prev.item_quality_inspection_parameter];
       rows[index] = { ...rows[index], [field]: value };
@@ -339,9 +371,8 @@ const Page = () => {
   function removeEditRow(index: number) {
     setEditFormData((prev) => ({
       ...prev,
-      item_quality_inspection_parameter: prev.item_quality_inspection_parameter.filter(
-        (_, i) => i !== index,
-      ),
+      item_quality_inspection_parameter:
+        prev.item_quality_inspection_parameter.filter((_, i) => i !== index),
     }));
   }
 
@@ -360,14 +391,17 @@ const Page = () => {
     try {
       const payload = {
         ...result.data,
-        item_quality_inspection_parameter: result.data.item_quality_inspection_parameter.map(
-          (row) => ({
+        item_quality_inspection_parameter:
+          result.data.item_quality_inspection_parameter.map((row) => ({
             parameter: row.specification,
             numeric: row.numeric ? 1 : 0,
-            ...(row.minimum_value !== "" && { minimum_value: parseFloat(row.minimum_value) }),
-            ...(row.maximum_value !== "" && { maximum_value: parseFloat(row.maximum_value) }),
-          }),
-        ),
+            ...(row.minimum_value !== "" && {
+              minimum_value: parseFloat(row.minimum_value),
+            }),
+            ...(row.maximum_value !== "" && {
+              maximum_value: parseFloat(row.maximum_value),
+            }),
+          })),
       };
       await axios.put(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspection-templates/${editName}`,
@@ -377,7 +411,9 @@ const Page = () => {
       setEditOpen(false);
       fetchData();
     } catch {
-      setEditErrors({ quality_inspection_template_name: "Failed to update. Please try again." });
+      setEditErrors({
+        quality_inspection_template_name: "Failed to update. Please try again.",
+      });
     }
   }
 
@@ -432,7 +468,11 @@ const Page = () => {
     rows: ParameterRowForm[],
     errs: Partial<Record<string, string>>,
     isEdit: boolean,
-    onRowChange: (i: number, f: keyof ParameterRowForm, v: string | boolean) => void,
+    onRowChange: (
+      i: number,
+      f: keyof ParameterRowForm,
+      v: string | boolean,
+    ) => void,
     onAdd: () => void,
     onRemove: (i: number) => void,
   ) {
@@ -455,10 +495,7 @@ const Page = () => {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => {
-console.log("rowrowrow", row);
-
-                return (
+              {rows.map((row, i) => (
                 <tr key={i} className="border-t">
                   <td className="p-2">
                     <ParameterCombobox
@@ -466,9 +503,15 @@ console.log("rowrowrow", row);
                       parameters={parameters}
                       onChange={(v) => onRowChange(i, "specification", v)}
                     />
-                    {errs[`item_quality_inspection_parameter.${i}.specification`] && (
+                    {errs[
+                      `item_quality_inspection_parameter.${i}.specification`
+                    ] && (
                       <p className="text-xs text-destructive mt-1">
-                        {errs[`item_quality_inspection_parameter.${i}.specification`]}
+                        {
+                          errs[
+                            `item_quality_inspection_parameter.${i}.specification`
+                          ]
+                        }
                       </p>
                     )}
                   </td>
@@ -476,7 +519,9 @@ console.log("rowrowrow", row);
                     <input
                       type="checkbox"
                       checked={row.numeric}
-                      onChange={(e) => onRowChange(i, "numeric", e.target.checked)}
+                      onChange={(e) =>
+                        onRowChange(i, "numeric", e.target.checked)
+                      }
                       className="h-4 w-4 cursor-pointer"
                     />
                   </td>
@@ -485,7 +530,9 @@ console.log("rowrowrow", row);
                       type="number"
                       step="any"
                       value={row.minimum_value}
-                      onChange={(e) => onRowChange(i, "minimum_value", e.target.value)}
+                      onChange={(e) =>
+                        onRowChange(i, "minimum_value", e.target.value)
+                      }
                       placeholder="—"
                     />
                   </td>
@@ -494,7 +541,9 @@ console.log("rowrowrow", row);
                       type="number"
                       step="any"
                       value={row.maximum_value}
-                      onChange={(e) => onRowChange(i, "maximum_value", e.target.value)}
+                      onChange={(e) =>
+                        onRowChange(i, "maximum_value", e.target.value)
+                      }
                       placeholder="—"
                     />
                   </td>
@@ -510,8 +559,7 @@ console.log("rowrowrow", row);
                     </Button>
                   </td>
                 </tr>
-                )
-  })}
+              ))}
             </tbody>
           </table>
         </div>
@@ -580,7 +628,9 @@ console.log("rowrowrow", row);
             </div>
             <DialogFooter className="mt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
               </DialogClose>
               <Button type="submit">Save changes</Button>
             </DialogFooter>
@@ -604,72 +654,89 @@ console.log("rowrowrow", row);
             className="max-w-sm"
           />
 
-          {/* ── Add Dialog ────────────────────────────────────────────── */}
-          <Dialog
-            open={addOpen}
-            onOpenChange={(open) => {
-              setAddOpen(open);
-              if (open) {
-                setFormData(defaultFormData());
-                setErrors({});
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button variant="outline">Add Template</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>Add Quality Inspection Template</DialogTitle>
-                  <DialogDescription>
-                    Fill in the details below. Click save when you&apos;re done.
-                  </DialogDescription>
-                </DialogHeader>
-                <FieldGroup>
-                  <Field>
-                    <Label htmlFor="template_name">
-                      Quality Inspection Template Name{" "}
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                await axios.post(
+                  `${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspection-templates/mock-up-data`,
+                );
+                fetchData();
+              }}
+            >
+              Mock Up Data
+            </Button>
+
+            {/* ── Add Dialog ────────────────────────────────────────────── */}
+            <Dialog
+              open={addOpen}
+              onOpenChange={(open) => {
+                setAddOpen(open);
+                if (open) {
+                  setFormData(defaultFormData());
+                  setErrors({});
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button variant="outline">Add Template</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>Add Quality Inspection Template</DialogTitle>
+                    <DialogDescription>
+                      Fill in the details below. Click save when you&apos;re
+                      done.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <FieldGroup>
+                    <Field>
+                      <Label htmlFor="template_name">
+                        Quality Inspection Template Name{" "}
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="template_name"
+                        value={formData.quality_inspection_template_name}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            quality_inspection_template_name: e.target.value,
+                          }))
+                        }
+                      />
+                      <FieldError>
+                        {errors.quality_inspection_template_name}
+                      </FieldError>
+                    </Field>
+                  </FieldGroup>
+                  <div className="mt-4">
+                    <Label>
+                      Item Quality Inspection Parameter{" "}
                       <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      id="template_name"
-                      value={formData.quality_inspection_template_name}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          quality_inspection_template_name: e.target.value,
-                        }))
-                      }
-                    />
-                    <FieldError>
-                      {errors.quality_inspection_template_name}
-                    </FieldError>
-                  </Field>
-                </FieldGroup>
-                <div className="mt-4">
-                  <Label>
-                    Item Quality Inspection Parameter{" "}
-                    <span className="text-destructive">*</span>
-                  </Label>
-                  {renderParamTable(
-                    formData.item_quality_inspection_parameter,
-                    errors,
-                    false,
-                    updateRow,
-                    addRow,
-                    removeRow,
-                  )}
-                </div>
-                <DialogFooter className="mt-4">
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button type="submit">Save changes</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                    {renderParamTable(
+                      formData.item_quality_inspection_parameter,
+                      errors,
+                      false,
+                      updateRow,
+                      addRow,
+                      removeRow,
+                    )}
+                  </div>
+                  <DialogFooter className="mt-4">
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button type="submit">Save changes</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </DataTable>
     </div>

@@ -75,6 +75,64 @@ def get_template(name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+MOCK_TEMPLATES = [
+    {
+        "quality_inspection_template_name": "Incoming Metal Parts",
+        "parameters": ["Dimension", "Hardness", "Visual Inspection"],
+    },
+    {
+        "quality_inspection_template_name": "Electrical Component Check",
+        "parameters": ["Electrical Conductivity", "Visual Inspection", "Weight"],
+    },
+    {
+        "quality_inspection_template_name": "Pipe & Valve Inspection",
+        "parameters": ["Pressure Test", "Corrosion Resistance", "Dimension"],
+    },
+    {
+        "quality_inspection_template_name": "Raw Material QC",
+        "parameters": ["Chemical Composition", "Tensile Strength", "Surface Finish"],
+    },
+    {
+        "quality_inspection_template_name": "General Incoming",
+        "parameters": ["Visual Inspection", "Weight", "Dimension"],
+    },
+]
+
+@router.post("/mock-up-data")
+def mock_up_data():
+    # fetch available parameters
+    param_res = requests.get(
+        f"{FRAPPE_URL}/api/resource/Quality Inspection Parameter",
+        headers=HEADERS,
+        params={"limit_page_length": 200}
+    )
+    available = {p["name"] for p in param_res.json().get("data", [])}
+
+    results = []
+    for tmpl in MOCK_TEMPLATES:
+        try:
+            rows = [
+                {"doctype": "Item Quality Inspection Parameter", "specification": p}
+                for p in tmpl["parameters"]
+                if p in available
+            ]
+            payload = {
+                "doctype": "Quality Inspection Template",
+                "quality_inspection_template_name": tmpl["quality_inspection_template_name"],
+                "item_quality_inspection_parameter": rows,
+            }
+            res = requests.post(
+                f"{FRAPPE_URL}/api/resource/Quality Inspection Template",
+                json=payload,
+                headers=HEADERS
+            )
+            results.append({"name": tmpl["quality_inspection_template_name"], "status": "ok"})
+        except Exception as e:
+            results.append({"name": tmpl["quality_inspection_template_name"], "status": "error", "detail": str(e)})
+
+    return {"results": results}
+
+
 @router.post("")
 def create_template(data: dict):
     try:

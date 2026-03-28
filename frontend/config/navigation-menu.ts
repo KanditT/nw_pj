@@ -32,8 +32,8 @@ export const MENU = [
     icon: ClipboardCheck,
   },
   {
-    name: "Inspection",
-    href: "/inspection",
+    name: "Quality Inspection",
+    href: "/quality-inspection",
     icon: ClipboardCheck,
   },
   {

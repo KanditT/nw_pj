@@ -22,6 +22,16 @@ export const MENU = [
     icon: ClipboardCheck,
   },
   {
+    name: "QI Parameter",
+    href: "/quality-inspection-parameter",
+    icon: ClipboardCheck,
+  },
+  {
+    name: "QI Template",
+    href: "/quality-inspection-template",
+    icon: ClipboardCheck,
+  },
+  {
     name: "Inspection",
     href: "/inspection",
     icon: ClipboardCheck,

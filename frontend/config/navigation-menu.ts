@@ -17,6 +17,11 @@ export const MENU = [
     icon: ClipboardCheck,
   },
   {
+    name: "Purchase Receipt",
+    href: "/purchase-receipt",
+    icon: ClipboardCheck,
+  },
+  {
     name: "Inspection",
     href: "/inspection",
     icon: ClipboardCheck,

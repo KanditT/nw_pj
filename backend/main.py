@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 import requests
-from routes import item, item_group, supplier
+from routes import item, item_group, supplier, purchase_receipt
 from fastapi.middleware.cors import CORSMiddleware
 import json
 
@@ -125,3 +125,4 @@ def delete_inspection(name: str):
 app.include_router(item.router, prefix="/items", tags=["items"])
 app.include_router(item_group.router, prefix="/item-groups", tags=["item-groups"])
 app.include_router(supplier.router, prefix="/suppliers", tags=["suppliers"])
+app.include_router(purchase_receipt.router, prefix="/purchase-receipts", tags=["purchase-receipts"])

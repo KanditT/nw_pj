@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, ThumbsUp, ThumbsDown } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
 import { Paginate } from "@/types/paginate";
@@ -546,11 +546,21 @@ const Page = () => {
               )}
             </div>
             <div className="flex gap-2">
-              <Button disabled={selected.size === 0} onClick={() => openAction("approve")}>
-                Approve Selected
+              <Button
+                disabled={selected.size === 0}
+                className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                onClick={() => openAction("approve")}
+              >
+                <ThumbsUp className="mr-2 h-4 w-4" />
+                Approve{selected.size > 0 ? ` (${selected.size})` : ""}
               </Button>
-              <Button variant="destructive" disabled={selected.size === 0} onClick={() => openAction("reject")}>
-                Reject Selected
+              <Button
+                variant="destructive"
+                disabled={selected.size === 0}
+                onClick={() => openAction("reject")}
+              >
+                <ThumbsDown className="mr-2 h-4 w-4" />
+                Reject{selected.size > 0 ? ` (${selected.size})` : ""}
               </Button>
             </div>
           </div>

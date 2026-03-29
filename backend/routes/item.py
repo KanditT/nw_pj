@@ -148,6 +148,7 @@ def mock_up_data():
                 "stock_uom": "Nos",
                 "inspection_required_before_purchase": 1,
             }
+            print("Creating item:", f"{FRAPPE_URL}/api/resource/{domain}", payload)
             res = requests.post(
                 f"{FRAPPE_URL}/api/resource/{domain}",
                 json=payload,

@@ -1,4 +1,4 @@
-name: quality-inspect
+name: quality-service
 
 services:
   api:

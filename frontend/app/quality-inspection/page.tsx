@@ -67,9 +67,11 @@ interface UserOption {
 }
 interface TemplateParameter {
   specification: string;
+  min_value?: number;
+  max_value?: number;
 }
 
-type ReadingRow = { specification: string; reading_1: string };
+type ReadingRow = { specification: string; reading_1: string; min_value?: number; max_value?: number };
 
 type QIFormData = {
   naming_series: string;
@@ -102,6 +104,8 @@ const qiSchema = z.object({
     z.object({
       specification: z.string(),
       reading_1: z.string().default(""),
+      min_value: z.number().optional(),
+      max_value: z.number().optional(),
     }),
   ),
 });
@@ -277,8 +281,10 @@ const Page = () => {
       );
       const params: TemplateParameter[] = (
         res.data.data?.item_quality_inspection_parameter ?? []
-      ).map((r: { specification?: string }) => ({
+      ).map((r: { specification?: string; min_value?: number; max_value?: number }) => ({
         specification: r.specification ?? "",
+        min_value: r.min_value,
+        max_value: r.max_value,
       }));
       setTemplateParams((prev) => ({ ...prev, [templateName]: params }));
       return params;
@@ -326,6 +332,8 @@ const Page = () => {
       readings: params.map((p) => ({
         specification: p.specification,
         reading_1: "",
+        min_value: p.min_value,
+        max_value: p.max_value,
       })),
     }));
   }
@@ -339,6 +347,8 @@ const Page = () => {
       readings: parsed.readings.map((r) => ({
         specification: r.specification,
         reading_1: r.reading_1, // keep as string — ERPNext calls .strip() on it
+        min_value: r.min_value,
+        max_value: r.max_value,
       })),
     };
   }

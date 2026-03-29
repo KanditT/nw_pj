@@ -1,4 +1,14 @@
-import { CheckCircle, ClipboardCheck, LayoutDashboard } from "lucide-react";
+import {
+  BadgeCheck,
+  Building2,
+  LayoutDashboard,
+  Package,
+  Receipt,
+  ScrollText,
+  ShieldCheck,
+  SlidersHorizontal,
+  ClipboardList,
+} from "lucide-react";
 
 export const MENU = [
   {
@@ -9,36 +19,41 @@ export const MENU = [
   {
     name: "Item",
     href: "/item",
-    icon: ClipboardCheck,
+    icon: Package,
   },
   {
     name: "Supplier",
     href: "/supplier",
-    icon: ClipboardCheck,
+    icon: Building2,
   },
   {
     name: "Purchase Receipt",
     href: "/purchase-receipt",
-    icon: ClipboardCheck,
+    icon: Receipt,
   },
   {
     name: "QI Parameter",
     href: "/quality-inspection-parameter",
-    icon: ClipboardCheck,
+    icon: SlidersHorizontal,
   },
   {
     name: "QI Template",
     href: "/quality-inspection-template",
-    icon: ClipboardCheck,
+    icon: ClipboardList,
   },
   {
     name: "Quality Inspection",
     href: "/quality-inspection",
-    icon: ClipboardCheck,
+    icon: ShieldCheck,
   },
   {
     name: "Approvals",
     href: "/approvals",
-    icon: CheckCircle,
+    icon: BadgeCheck,
+  },
+  {
+    name: "Audit Log",
+    href: "/audit-log",
+    icon: ScrollText,
   },
 ];

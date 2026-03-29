@@ -5,6 +5,7 @@ import requests
 import json
 
 from config.config import FRAPPE_URL, HEADERS
+from routes.audit_log import log_action
 
 router = APIRouter()
 domain = "Quality Inspection"
@@ -23,6 +24,8 @@ class QIReadingIn(BaseModel):
     """Child table: Quality Inspection Reading"""
     specification: str          # references Quality Inspection Parameter name
     reading_1: str = ""         # must be string — ERPNext calls .strip() on it
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
 
 
 class QIIn(BaseModel):
@@ -152,11 +155,14 @@ def create_quality_inspection(data: QIIn):
             headers=HEADERS
         )
 
+        log_action("create", "Quality Inspection", inspection_name,
+                   user=data.inspected_by, detail=f"item={data.item_code}")
+
         return {
             "inspection": inspection,
             "message": "Inspection created + approval created"
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -183,12 +189,12 @@ def update_quality_inspection(name: str, data: QIUpdate):
 @router.post("/{name}/cancel")
 def cancel_quality_inspection(name: str):
     try:
-        # Set docstatus=2 (cancelled) via PUT
         res = requests.put(
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",
             json={"docstatus": 2},
             headers=HEADERS
         )
+        log_action("cancel", "Quality Inspection", name)
         return res.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -216,6 +222,7 @@ def delete_quality_inspection(name: str):
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",
             headers=HEADERS
         )
+        log_action("delete", "Quality Inspection", name)
         return res.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

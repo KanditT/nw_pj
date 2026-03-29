@@ -6,6 +6,7 @@ import requests
 import json
 
 from config.config import FRAPPE_URL, HEADERS
+from routes.audit_log import log_action
 
 router = APIRouter()
 
@@ -142,7 +143,7 @@ def get_history(
 
 
 @router.post("/{name}/cancel")
-def cancel_approval(name: str):
+def cancel_approval(name: str, user: str = ""):
     try:
         # 1. get reference
         approval = requests.get(
@@ -166,6 +167,9 @@ def cancel_approval(name: str):
                 json={"status": "Accepted"},
             )
 
+        log_action("cancel_approval", "Approval Request", name,
+                   user=user or approval.get("approved_by", ""),
+                   detail=f"qi={inspection_name}")
         return {"message": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -205,6 +209,8 @@ def approve(name: str, action: str, user: str, comment: str = ""):
             }
         )
 
+        log_action(action, "Approval Request", name,
+                   user=user, detail=f"qi={inspection_name}, comment={comment}")
         return {"message": "success"}
 
     except Exception as e:

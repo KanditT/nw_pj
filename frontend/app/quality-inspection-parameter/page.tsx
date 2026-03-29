@@ -44,6 +44,10 @@ const Page = () => {
   });
   const [keyword, setKeyword] = useState("");
 
+  // View dialog
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewItem, setViewItem] = useState<QualityInspectionParameter | null>(null);
+
   // Add dialog
   const [addOpen, setAddOpen] = useState(false);
   const [formData, setFormData] = useState<ParamFormData>(defaultFormData);
@@ -113,6 +117,13 @@ const Page = () => {
     }
   }
 
+  // ── View ─────────────────────────────────────────────────────────────────
+
+  function handleViewOpen(row: QualityInspectionParameter) {
+    setViewItem(row);
+    setViewOpen(true);
+  }
+
   // ── Delete ────────────────────────────────────────────────────────────────
 
   async function handleDelete(name: string) {
@@ -135,7 +146,7 @@ const Page = () => {
         id: "actions",
         header: "Action",
         cell: ({ row }) => (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
               variant="destructive"
@@ -155,6 +166,31 @@ const Page = () => {
 
   return (
     <div>
+      {/* ── View Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Quality Inspection Parameter</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{viewItem?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          {viewItem && (
+            <FieldGroup>
+              <Field>
+                <Label>Parameter Name</Label>
+                <Input value={viewItem.name} disabled />
+              </Field>
+            </FieldGroup>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Table ───────────────────────────────────────────────────────── */}
       <DataTable
         columns={columns}
@@ -162,6 +198,7 @@ const Page = () => {
         changeRowPerPage={handleChangeRowPerPage}
         paginate={paginate}
         changePaginate={handleChangePaginate}
+        onRowClick={handleViewOpen}
       >
         <div className="flex items-center justify-between mb-4">
           <Input

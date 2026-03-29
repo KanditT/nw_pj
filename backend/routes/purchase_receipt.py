@@ -2,13 +2,7 @@ from fastapi import HTTPException, APIRouter, Query
 import requests
 import json
 
-from config.config import FRAPPE_URL, API_KEY, API_SECRET
-
-HEADERS = {
-    "Authorization": f"token {API_KEY}:{API_SECRET}",
-    "Content-Type": "application/json",
-    "Host": "frontend"
-}
+from config.config import FRAPPE_URL, HEADERS
 
 router = APIRouter()
 

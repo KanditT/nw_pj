@@ -3,13 +3,7 @@ import requests
 import os
 import json
 
-from config.config import FRAPPE_URL, API_KEY, API_SECRET, ERPNEXT_USER, ERPNEXT_PASSWORD
-
-HEADERS = {
-    "Authorization": f"token {API_KEY}:{API_SECRET}",
-    "Content-Type": "application/json",
-    "Host": "frontend"
-}
+from config.config import FRAPPE_URL, HEADERS
 
 router = APIRouter()
 

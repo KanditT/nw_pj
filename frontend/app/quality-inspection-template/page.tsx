@@ -174,6 +174,10 @@ const Page = () => {
     {},
   );
 
+  // View dialog
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewItem, setViewItem] = useState<QITFormData & { name: string } | null>(null);
+
   // Create Parameter dialog (rendered at page level — not nested)
   const [createParamOpen, setCreateParamOpen] = useState(false);
   const [createParamName, setCreateParamName] = useState("");
@@ -417,6 +421,32 @@ const Page = () => {
     }
   }
 
+  // ── View ──────────────────────────────────────────────────────────────────
+
+  async function handleViewOpen(row: QualityInspectionTemplate) {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspection-templates/${row.name}`,
+      );
+      const t = response.data.data;
+      setViewItem({
+        name: t.name,
+        quality_inspection_template_name: t.quality_inspection_template_name ?? "",
+        item_quality_inspection_parameter: (t.item_quality_inspection_parameter ?? []).map(
+          (r: { specification?: string; numeric?: number | boolean; minimum_value?: number; maximum_value?: number }) => ({
+            specification: r.specification ?? "",
+            numeric: Boolean(r.numeric),
+            minimum_value: r.minimum_value != null ? String(r.minimum_value) : "",
+            maximum_value: r.maximum_value != null ? String(r.maximum_value) : "",
+          }),
+        ),
+      });
+      setViewOpen(true);
+    } catch {
+      // don't open if fetch failed
+    }
+  }
+
   // ── Delete ────────────────────────────────────────────────────────────────
 
   async function handleDelete(name: string) {
@@ -439,7 +469,7 @@ const Page = () => {
         id: "actions",
         header: "Action",
         cell: ({ row }) => (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
               variant="outline"
@@ -580,6 +610,60 @@ const Page = () => {
 
   return (
     <div>
+      {/* ── View Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Quality Inspection Template</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{viewItem?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          {viewItem && (
+            <>
+              <FieldGroup>
+                <Field>
+                  <Label>Template Name</Label>
+                  <Input value={viewItem.quality_inspection_template_name} disabled />
+                </Field>
+              </FieldGroup>
+              <div className="mt-4">
+                <Label>Parameters</Label>
+                <div className="border rounded-md mt-2 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-2 font-medium">Parameter</th>
+                        <th className="text-center p-2 font-medium w-20">Numeric</th>
+                        <th className="text-left p-2 font-medium w-28">Min Value</th>
+                        <th className="text-left p-2 font-medium w-28">Max Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewItem.item_quality_inspection_parameter.map((row, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="p-2"><Input value={row.specification} disabled /></td>
+                          <td className="p-2 text-center">
+                            <input type="checkbox" checked={row.numeric} disabled className="h-4 w-4" />
+                          </td>
+                          <td className="p-2"><Input value={row.minimum_value} disabled /></td>
+                          <td className="p-2"><Input value={row.maximum_value} disabled /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Edit Dialog ─────────────────────────────────────────────────── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -645,6 +729,7 @@ const Page = () => {
         changeRowPerPage={handleChangeRowPerPage}
         paginate={paginate}
         changePaginate={handleChangePaginate}
+        onRowClick={handleViewOpen}
       >
         <div className="flex items-center justify-between mb-4">
           <Input

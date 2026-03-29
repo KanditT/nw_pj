@@ -157,6 +157,26 @@ const Page = () => {
     Partial<Record<keyof ItemFormData, string>>
   >({});
 
+  // View dialog
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewItem, setViewItem] = useState<{ name: string; item_name: string; item_group: string; stock_uom: string } | null>(null);
+
+  async function handleViewOpen(row: Items) {
+    try {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}items/${row.name}`);
+      const item = response.data.data;
+      setViewItem({
+        name: item.name,
+        item_name: item.item_name ?? "",
+        item_group: item.item_group ?? "",
+        stock_uom: item.stock_uom ?? "",
+      });
+      setViewOpen(true);
+    } catch {
+      // ignore
+    }
+  }
+
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
   const [editItemCode, setEditItemCode] = useState("");
@@ -335,7 +355,7 @@ const Page = () => {
         id: "actions",
         header: "Action",
         cell: ({ row }) => (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
               variant="outline"
@@ -362,6 +382,41 @@ const Page = () => {
 
   return (
     <div>
+      {/* ── View Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Item Detail</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{viewItem?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field>
+              <Label>Item Code</Label>
+              <Input value={viewItem?.name ?? ""} disabled />
+            </Field>
+            <Field>
+              <Label>Item Name</Label>
+              <Input value={viewItem?.item_name ?? ""} disabled />
+            </Field>
+            <Field>
+              <Label>Item Group</Label>
+              <Input value={viewItem?.item_group ?? ""} disabled />
+            </Field>
+            <Field>
+              <Label>Stock UOM</Label>
+              <Input value={viewItem?.stock_uom ?? ""} disabled />
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Edit Dialog ─────────────────────────────────────────────────── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -441,6 +496,7 @@ const Page = () => {
         changeRowPerPage={handleChangeRowPerPage}
         paginate={paginate}
         changePaginate={handleChangePaginate}
+        onRowClick={handleViewOpen}
       >
         <div className="flex items-center justify-between mb-4">
           <Input

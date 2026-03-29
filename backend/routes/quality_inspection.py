@@ -2,13 +2,7 @@ from fastapi import HTTPException, APIRouter, Query
 import requests
 import json
 
-from config.config import FRAPPE_URL, API_KEY, API_SECRET
-
-HEADERS = {
-    "Authorization": f"token {API_KEY}:{API_SECRET}",
-    "Content-Type": "application/json",
-    "Host": "frontend"
-}
+from config.config import FRAPPE_URL, HEADERS
 
 router = APIRouter()
 domain = "Quality Inspection"
@@ -84,7 +78,8 @@ def get_quality_inspection(name: str):
 def create_quality_inspection(data: dict):
     try:
         raw_readings = data.pop("readings", [])
-        readings = [{"doctype": "Quality Inspection Reading", **r} for r in raw_readings]
+        readings = [{"doctype": "Quality Inspection Reading", **r}
+                    for r in raw_readings]
 
         payload = {
             "doctype": domain,
@@ -98,7 +93,32 @@ def create_quality_inspection(data: dict):
             json=payload,
             headers=HEADERS
         )
-        return res.json()
+
+        inspection = res.json().get("data", {})
+
+        if not inspection:
+            return res.json()
+
+        inspection_name = inspection.get("name")
+        
+        approval_payload = {
+            "doctype": "Approval Request",
+            "reference_doctype": "Quality Inspection",
+            "reference_name": inspection_name,
+            "status": "Pending"
+        }
+
+        requests.post(
+            f"{FRAPPE_URL}/api/resource/Approval Request",
+            json=approval_payload,
+            headers=HEADERS
+        )
+
+        return {
+            "inspection": inspection,
+            "message": "Inspection created + approval created"
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

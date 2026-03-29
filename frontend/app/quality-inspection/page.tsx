@@ -213,6 +213,10 @@ const Page = () => {
     Record<string, TemplateParameter[]>
   >({});
 
+  // View dialog
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewItem, setViewItem] = useState<(QIFormData & { name: string }) | null>(null);
+
   // Add dialog
   const [addOpen, setAddOpen] = useState(false);
   const [formData, setFormData] = useState<QIFormData>(defaultFormData);
@@ -339,6 +343,37 @@ const Page = () => {
     };
   }
 
+  // ── View ─────────────────────────────────────────────────────────────────
+
+  async function handleViewOpen(row: QualityInspection) {
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspections/${row.name}`,
+      );
+      const qi = res.data.data;
+      setViewItem({
+        name: qi.name,
+        naming_series: qi.naming_series ?? "",
+        report_date: qi.report_date ?? "",
+        status: qi.status ?? "",
+        inspection_type: qi.inspection_type ?? "",
+        reference_type: qi.reference_type ?? "",
+        reference_name: qi.reference_name ?? "",
+        item_code: qi.item_code ?? "",
+        sample_size: String(qi.sample_size ?? 0),
+        quality_inspection_template: qi.quality_inspection_template ?? "",
+        inspected_by: qi.inspected_by ?? "",
+        readings: (qi.readings ?? []).map((r: { specification?: string; reading_1?: string }) => ({
+          specification: r.specification ?? "",
+          reading_1: r.reading_1 ?? "",
+        })),
+      });
+      setViewOpen(true);
+    } catch {
+      // don't open if fetch failed
+    }
+  }
+
   // ── Add ───────────────────────────────────────────────────────────────────
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -406,7 +441,7 @@ const Page = () => {
         id: "actions",
         header: "Action",
         cell: ({ row }) => (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
               variant="secondary"
@@ -660,6 +695,62 @@ const Page = () => {
 
   return (
     <div>
+      {/* ── View Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Quality Inspection</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{viewItem?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          {viewItem && (
+            <>
+              <FieldGroup>
+                <Field><Label>Series</Label><Input value={viewItem.naming_series} disabled /></Field>
+                <Field><Label>Report Date</Label><Input type="date" value={viewItem.report_date} disabled /></Field>
+                <Field><Label>Status</Label><Input value={viewItem.status} disabled /></Field>
+                <Field><Label>Inspection Type</Label><Input value={viewItem.inspection_type} disabled /></Field>
+                <Field><Label>Reference Type</Label><Input value={viewItem.reference_type} disabled /></Field>
+                <Field><Label>Reference Name</Label><Input value={viewItem.reference_name} disabled /></Field>
+                <Field><Label>Item Code</Label><Input value={viewItem.item_code} disabled /></Field>
+                <Field><Label>Sample Size</Label><Input value={viewItem.sample_size} disabled /></Field>
+                <Field><Label>Quality Inspection Template</Label><Input value={viewItem.quality_inspection_template} disabled /></Field>
+                <Field><Label>Inspected By</Label><Input value={viewItem.inspected_by} disabled /></Field>
+              </FieldGroup>
+              {viewItem.readings.length > 0 && (
+                <div className="mt-4">
+                  <Label>Quality Inspection Readings</Label>
+                  <div className="border rounded-md mt-2 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left p-2 font-medium">Parameter</th>
+                          <th className="text-left p-2 font-medium w-36">Reading Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {viewItem.readings.map((row, i) => (
+                          <tr key={i} className="border-t">
+                            <td className="p-2 text-sm">{row.specification}</td>
+                            <td className="p-2"><Input value={row.reading_1} disabled /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Table */}
       <DataTable
         columns={columns}
@@ -667,6 +758,7 @@ const Page = () => {
         changeRowPerPage={handleChangeRowPerPage}
         paginate={paginate}
         changePaginate={handleChangePaginate}
+        onRowClick={handleViewOpen}
       >
         <div className="flex items-center justify-between mb-4">
           <Input

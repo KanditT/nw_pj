@@ -8,3 +8,9 @@ API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 ERPNEXT_USER = os.getenv("ERPNEXT_USER")
 ERPNEXT_PASSWORD = os.getenv("ERPNEXT_PASSWORD")
+
+HEADERS = {
+    "Authorization": f"token {API_KEY}:{API_SECRET}",
+    "Content-Type": "application/json",
+    "Host": "frontend"
+}

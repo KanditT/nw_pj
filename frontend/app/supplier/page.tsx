@@ -128,6 +128,10 @@ const Page = () => {
   const [addForm, setAddForm] = useState<AddFormData>(defaultAddForm);
   const [addErrors, setAddErrors] = useState<Partial<Record<keyof AddFormData, string>>>({});
 
+  // View dialog
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewItem, setViewItem] = useState<{ name: string; supplier_name: string; supplier_type: string } | null>(null);
+
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -196,6 +200,25 @@ const Page = () => {
       fetchData();
     } catch {
       setAddErrors({ supplier_name: "Failed to create supplier. Please try again." });
+    }
+  }
+
+  // ── View ─────────────────────────────────────────────────────────────────
+
+  async function handleViewOpen(row: Supplier) {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}suppliers/${row.name}`,
+      );
+      const s = response.data.data;
+      setViewItem({
+        name: s.name,
+        supplier_name: s.supplier_name ?? "",
+        supplier_type: s.supplier_type ?? "",
+      });
+      setViewOpen(true);
+    } catch {
+      // don't open if fetch failed
     }
   }
 
@@ -270,7 +293,7 @@ const Page = () => {
         id: "actions",
         header: "Action",
         cell: ({ row }) => (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button size="sm" variant="outline" onClick={() => handleEditOpen(row.original.name)}>
               Edit
             </Button>
@@ -289,6 +312,35 @@ const Page = () => {
 
   return (
     <div>
+      {/* ── View Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Supplier</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{viewItem?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          {viewItem && (
+            <FieldGroup>
+              <Field>
+                <Label>Supplier Type</Label>
+                <Input value={viewItem.supplier_type} disabled />
+              </Field>
+              <Field>
+                <Label>Supplier Name</Label>
+                <Input value={viewItem.supplier_name} disabled />
+              </Field>
+            </FieldGroup>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Edit Dialog ─────────────────────────────────────────────────── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -344,6 +396,7 @@ const Page = () => {
         changeRowPerPage={handleChangeRowPerPage}
         paginate={paginate}
         changePaginate={handleChangePaginate}
+        onRowClick={handleViewOpen}
       >
         <div className="flex items-center justify-between mb-4">
           <Input

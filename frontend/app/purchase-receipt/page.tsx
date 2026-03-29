@@ -245,6 +245,10 @@ const Page = () => {
   const [formData, setFormData] = useState<PRFormData>(getDefaultFormData);
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
+  // View dialog
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewItem, setViewItem] = useState<PRFormData & { name: string } | null>(null);
+
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -468,6 +472,32 @@ const Page = () => {
     }
   }
 
+  // ── View ──────────────────────────────────────────────────────────────────
+
+  async function handleViewOpen(row: PurchaseReceipt) {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}purchase-receipts/${row.name}`,
+      );
+      const pr = response.data.data;
+      setViewItem({
+        name: pr.name,
+        naming_series: pr.naming_series ?? "",
+        supplier: pr.supplier ?? "",
+        posting_date: pr.posting_date ?? "",
+        posting_time: normalizeTime(pr.posting_time ?? ""),
+        items: (pr.items ?? []).map((item: { item_code?: string; qty?: number; rate?: number }) => ({
+          item_code: item.item_code ?? "",
+          qty: String(item.qty ?? 1),
+          rate: String(item.rate ?? 0),
+        })),
+      });
+      setViewOpen(true);
+    } catch {
+      // don't open if fetch failed
+    }
+  }
+
   // ── Delete ────────────────────────────────────────────────────────────────
 
   async function handleDelete(name: string) {
@@ -492,7 +522,7 @@ const Page = () => {
         id: "actions",
         header: "Action",
         cell: ({ row }) => (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
               variant="outline"
@@ -685,6 +715,74 @@ const Page = () => {
 
   return (
     <div>
+      {/* ── View Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Purchase Receipt</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{viewItem?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          {viewItem && (
+            <>
+              <FieldGroup>
+                <Field>
+                  <Label>Series</Label>
+                  <Input value={viewItem.naming_series} disabled />
+                </Field>
+                <Field>
+                  <Label>Supplier</Label>
+                  <Input value={viewItem.supplier} disabled />
+                </Field>
+                <Field>
+                  <Label>Date</Label>
+                  <Input type="date" value={viewItem.posting_date} disabled />
+                </Field>
+                <Field>
+                  <Label>Posting Time</Label>
+                  <Input type="time" value={viewItem.posting_time} disabled />
+                </Field>
+              </FieldGroup>
+              <div className="mt-4">
+                <Label>Items</Label>
+                <div className="border rounded-md mt-2 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-2 font-medium">Item</th>
+                        <th className="text-left p-2 font-medium w-24">Qty</th>
+                        <th className="text-left p-2 font-medium w-28">Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewItem.items.map((row, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="p-2">
+                            <Input value={row.item_code} disabled />
+                          </td>
+                          <td className="p-2">
+                            <Input value={row.qty} disabled />
+                          </td>
+                          <td className="p-2">
+                            <Input value={row.rate} disabled />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Edit Dialog ─────────────────────────────────────────────────── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -731,6 +829,7 @@ const Page = () => {
         changeRowPerPage={handleChangeRowPerPage}
         paginate={paginate}
         changePaginate={handleChangePaginate}
+        onRowClick={handleViewOpen}
       >
         <div className="flex items-center justify-between mb-4">
           <Input

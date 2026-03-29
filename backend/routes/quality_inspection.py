@@ -1,4 +1,6 @@
 from fastapi import HTTPException, APIRouter, Query
+from pydantic import BaseModel
+from typing import Optional
 import requests
 import json
 
@@ -13,6 +15,42 @@ SUBMIT_HEADERS = {
 }
 
 
+# ── Doctype: Quality Inspection ───────────────────────────────────────────────
+# docstatus=1 (Submitted) is set automatically on create.
+# Creating a QI also auto-creates an Approval Request (Pending).
+
+class QIReadingIn(BaseModel):
+    """Child table: Quality Inspection Reading"""
+    specification: str          # references Quality Inspection Parameter name
+    reading_1: str = ""         # must be string — ERPNext calls .strip() on it
+
+
+class QIIn(BaseModel):
+    naming_series: str = "MAT-QA-.YYYY.-"
+    report_date: str                        # YYYY-MM-DD
+    status: str = "Accepted"               # Accepted | Rejected | Cancelled
+    inspection_type: str = "Incoming"      # Incoming | Outgoing | In Process
+    reference_type: str = "Purchase Receipt"
+    reference_name: str                    # Purchase Receipt name
+    item_code: str
+    sample_size: float = 0
+    quality_inspection_template: Optional[str] = None
+    inspected_by: str                      # user email
+    readings: list[QIReadingIn] = []
+
+
+class QIUpdate(BaseModel):
+    report_date: Optional[str] = None
+    status: Optional[str] = None
+    inspection_type: Optional[str] = None
+    reference_name: Optional[str] = None
+    item_code: Optional[str] = None
+    sample_size: Optional[float] = None
+    quality_inspection_template: Optional[str] = None
+    inspected_by: Optional[str] = None
+    readings: Optional[list[QIReadingIn]] = None
+
+
 @router.get("")
 def get_quality_inspections(
     keyword: str = Query(None),
@@ -24,7 +62,7 @@ def get_quality_inspections(
         start = (current_page - 1) * page_size
 
         params = {
-            "fields": json.dumps(["name", "status", "report_date", "item_code", "inspected_by"]),
+            "fields": json.dumps(["name", "status", "docstatus", "report_date", "item_code", "inspected_by"]),
             "limit_page_length": page_size,
             "limit_start": start
         }
@@ -75,17 +113,17 @@ def get_quality_inspection(name: str):
 
 
 @router.post("")
-def create_quality_inspection(data: dict):
+def create_quality_inspection(data: QIIn):
     try:
-        raw_readings = data.pop("readings", [])
-        readings = [{"doctype": "Quality Inspection Reading", **r}
-                    for r in raw_readings]
-
+        readings = [
+            {"doctype": "Quality Inspection Reading", **r.model_dump()}
+            for r in data.readings
+        ]
         payload = {
             "doctype": domain,
             "docstatus": 1,
+            **data.model_dump(exclude={"readings"}),
             "readings": readings,
-            **data
         }
 
         res = requests.post(
@@ -124,17 +162,17 @@ def create_quality_inspection(data: dict):
 
 
 @router.put("/{name}")
-def update_quality_inspection(name: str, data: dict):
+def update_quality_inspection(name: str, data: QIUpdate):
     try:
-        raw_readings = data.pop("readings", None)
-        if raw_readings is not None:
-            data["readings"] = [
-                {"doctype": "Quality Inspection Reading", **r} for r in raw_readings
+        body = data.model_dump(exclude_none=True)
+        if "readings" in body:
+            body["readings"] = [
+                {"doctype": "Quality Inspection Reading", **r.model_dump()}
+                for r in (data.readings or [])
             ]
-
         res = requests.put(
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",
-            json=data,
+            json=body,
             headers=HEADERS
         )
         return res.json()
@@ -159,6 +197,21 @@ def cancel_quality_inspection(name: str):
 @router.delete("/{name}")
 def delete_quality_inspection(name: str):
     try:
+        # Delete linked Approval Request first
+        approval_res = requests.get(
+            f"{FRAPPE_URL}/api/resource/Approval Request",
+            headers=HEADERS,
+            params={
+                "filters": json.dumps([["reference_name", "=", name]]),
+                "limit_page_length": 1,
+            },
+        )
+        for approval in approval_res.json().get("data", []):
+            requests.delete(
+                f"{FRAPPE_URL}/api/resource/Approval Request/{approval['name']}",
+                headers=HEADERS,
+            )
+
         res = requests.delete(
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",
             headers=HEADERS

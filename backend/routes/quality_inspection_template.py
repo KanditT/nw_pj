@@ -1,4 +1,6 @@
 from fastapi import HTTPException, APIRouter, Query
+from pydantic import BaseModel
+from typing import Optional
 import requests
 import json
 
@@ -6,6 +8,26 @@ from config.config import FRAPPE_URL, HEADERS
 
 router = APIRouter()
 domain = "Quality Inspection Template"
+
+
+# ── Doctype: Quality Inspection Template ─────────────────────────────────────
+
+class QITemplateRowIn(BaseModel):
+    """Child table: Item Quality Inspection Parameter"""
+    specification: str          # references Quality Inspection Parameter name
+    numeric: int = 0            # 1 = numeric check, 0 = text/visual check
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+
+
+class QITemplateIn(BaseModel):
+    quality_inspection_template_name: str
+    item_quality_inspection_parameter: list[QITemplateRowIn]
+
+
+class QITemplateUpdate(BaseModel):
+    quality_inspection_template_name: Optional[str] = None
+    item_quality_inspection_parameter: Optional[list[QITemplateRowIn]] = None
 
 
 @router.get("")
@@ -72,23 +94,38 @@ def get_template(name: str):
 MOCK_TEMPLATES = [
     {
         "quality_inspection_template_name": "Incoming Metal Parts",
-        "parameters": ["Dimension", "Hardness", "Visual Inspection"],
+        "parameters": [
+            {"specification": "Dimension", "numeric": 1, "min_value": 9.8,  "max_value": 10.2},
+            {"specification": "Hardness",  "numeric": 1, "min_value": 50.0, "max_value": 70.0},
+        ],
     },
     {
         "quality_inspection_template_name": "Electrical Component Check",
-        "parameters": ["Electrical Conductivity", "Visual Inspection", "Weight"],
+        "parameters": [
+            {"specification": "Electrical Conductivity", "numeric": 1, "min_value": 95.0, "max_value": 100.0},
+            {"specification": "Weight",                  "numeric": 1, "min_value": 0.5,  "max_value": 2.0},
+        ],
     },
     {
         "quality_inspection_template_name": "Pipe & Valve Inspection",
-        "parameters": ["Pressure Test", "Corrosion Resistance", "Dimension"],
+        "parameters": [
+            {"specification": "Pressure Test", "numeric": 1, "min_value": 10.0, "max_value": 16.0},
+            {"specification": "Dimension",     "numeric": 1, "min_value": 49.5, "max_value": 50.5},
+        ],
     },
     {
         "quality_inspection_template_name": "Raw Material QC",
-        "parameters": ["Chemical Composition", "Tensile Strength", "Surface Finish"],
+        "parameters": [
+            {"specification": "Tensile Strength", "numeric": 1, "min_value": 400.0, "max_value": 600.0},
+            {"specification": "Hardness",         "numeric": 1, "min_value": 55.0,  "max_value": 65.0},
+        ],
     },
     {
         "quality_inspection_template_name": "General Incoming",
-        "parameters": ["Visual Inspection", "Weight", "Dimension"],
+        "parameters": [
+            {"specification": "Weight",    "numeric": 1, "min_value": 0.1, "max_value": 50.0},
+            {"specification": "Dimension", "numeric": 1, "min_value": 9.5, "max_value": 10.5},
+        ],
     },
 ]
 
@@ -106,9 +143,9 @@ def mock_up_data():
     for tmpl in MOCK_TEMPLATES:
         try:
             rows = [
-                {"doctype": "Item Quality Inspection Parameter", "specification": p}
+                {"doctype": "Item Quality Inspection Parameter", **p}
                 for p in tmpl["parameters"]
-                if p in available
+                if p["specification"] in available
             ]
             payload = {
                 "doctype": "Quality Inspection Template",
@@ -128,17 +165,17 @@ def mock_up_data():
 
 
 @router.post("")
-def create_template(data: dict):
+def create_template(data: QITemplateIn):
     try:
-        raw_rows = data.pop("item_quality_inspection_parameter", [])
-        rows = [{"doctype": "Item Quality Inspection Parameter", **row} for row in raw_rows]
-
+        rows = [
+            {"doctype": "Item Quality Inspection Parameter", **row.model_dump(exclude_none=True)}
+            for row in data.item_quality_inspection_parameter
+        ]
         payload = {
             "doctype": domain,
+            **data.model_dump(exclude={"item_quality_inspection_parameter"}),
             "item_quality_inspection_parameter": rows,
-            **data
         }
-
         res = requests.post(
             f"{FRAPPE_URL}/api/resource/{domain}",
             json=payload,
@@ -150,17 +187,17 @@ def create_template(data: dict):
 
 
 @router.put("/{name}")
-def update_template(name: str, data: dict):
+def update_template(name: str, data: QITemplateUpdate):
     try:
-        raw_rows = data.pop("item_quality_inspection_parameter", None)
-        if raw_rows is not None:
-            data["item_quality_inspection_parameter"] = [
-                {"doctype": "Item Quality Inspection Parameter", **row} for row in raw_rows
+        body = data.model_dump(exclude_none=True)
+        if "item_quality_inspection_parameter" in body:
+            body["item_quality_inspection_parameter"] = [
+                {"doctype": "Item Quality Inspection Parameter", **row.model_dump(exclude_none=True)}
+                for row in (data.item_quality_inspection_parameter or [])
             ]
-
         res = requests.put(
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",
-            json=data,
+            json=body,
             headers=HEADERS
         )
         return res.json()

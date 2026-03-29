@@ -1,4 +1,6 @@
 from fastapi import HTTPException, APIRouter, Query
+from pydantic import BaseModel
+from typing import Optional
 import requests
 import os
 import json
@@ -8,6 +10,23 @@ from config.config import FRAPPE_URL, HEADERS
 router = APIRouter()
 
 domain = "Item"
+
+
+# ── Doctype: Item ─────────────────────────────────────────────────────────────
+
+class ItemIn(BaseModel):
+    item_code: str
+    item_name: str
+    item_group: str
+    stock_uom: str = "Nos"
+    inspection_required_before_purchase: int = 0
+
+
+class ItemUpdate(BaseModel):
+    item_name: Optional[str] = None
+    item_group: Optional[str] = None
+    stock_uom: Optional[str] = None
+    inspection_required_before_purchase: Optional[int] = None
 
 # -----------------------------
 # 📥 GET all items
@@ -144,19 +163,14 @@ def mock_up_data():
 # ➕ CREATE inspection
 # -----------------------------
 @router.post("")
-def create_inspection(data: dict):
+def create_inspection(data: ItemIn):
     try:
-        payload = {
-            "doctype": domain,
-            **data
-        }
-
+        payload = {"doctype": domain, **data.model_dump()}
         res = requests.post(
             f"{FRAPPE_URL}/api/resource/{domain}",
             json=payload,
             headers=HEADERS
         )
-
         return res.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -166,11 +180,11 @@ def create_inspection(data: dict):
 # ✏️ UPDATE inspection
 # -----------------------------
 @router.put("/{name}")
-def update_inspection(name: str, data: dict):
+def update_inspection(name: str, data: ItemUpdate):
     try:
         res = requests.put(
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",
-            json=data,
+            json=data.model_dump(exclude_none=True),
             headers=HEADERS
         )
 

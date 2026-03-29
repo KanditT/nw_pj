@@ -1,4 +1,6 @@
 from fastapi import HTTPException, APIRouter, Query
+from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime
 import requests
 import json
@@ -7,8 +9,59 @@ from config.config import FRAPPE_URL, HEADERS
 
 router = APIRouter()
 
+
+# ── Doctype: Approval Request (custom doctype) ────────────────────────────────
+# Created automatically when a Quality Inspection is submitted.
+# status transitions: Pending → Approved | Rejected → (cancel) → Pending
+
+class ApprovalRequestDoc(BaseModel):
+    """Read-only shape returned by GET endpoints."""
+    name: str                           # auto-generated ID
+    reference_name: str                 # Quality Inspection name
+    status: str                         # Pending | Approved | Rejected
+    approved_by: Optional[str] = None   # user email of approver
+    approved_at: Optional[str] = None   # ISO datetime string
+    comment: Optional[str] = None
+
+
 FIELDS = ["name", "reference_name", "status", "approved_by", "approved_at", "comment"]
 BASE_URL = f"{FRAPPE_URL}/api/resource/Approval Request"
+
+
+@router.get("/stats")
+def get_stats():
+    """Approval + QI counts for the dashboard."""
+    try:
+        def count_approval(status_filter):
+            res = requests.get(
+                BASE_URL, headers=HEADERS,
+                params={"filters": json.dumps(status_filter), "limit_page_length": 0},
+            )
+            return len(res.json().get("data", []))
+
+        def count_doctype(doctype):
+            res = requests.get(
+                f"{FRAPPE_URL}/api/resource/{doctype}",
+                headers=HEADERS,
+                params={"limit_page_length": 0},
+            )
+            return len(res.json().get("data", []))
+
+        return {
+            "approval": {
+                "pending":  count_approval([["status", "=", "Pending"]]),
+                "approved": count_approval([["status", "=", "Approved"]]),
+                "rejected": count_approval([["status", "=", "Rejected"]]),
+            },
+            "totals": {
+                "quality_inspection": count_doctype("Quality Inspection"),
+                "purchase_receipt":   count_doctype("Purchase Receipt"),
+                "item":               count_doctype("Item"),
+                "supplier":           count_doctype("Supplier"),
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def _paginated(status_filter: list, keyword: str | None, page_size: int, current_page: int):
@@ -32,6 +85,22 @@ def _paginated(status_filter: list, keyword: str | None, page_size: int, current
     data = requests.get(BASE_URL, headers=HEADERS, params=params).json().get("data", [])
     total = len(requests.get(BASE_URL, headers=HEADERS, params={**count_params, "limit_page_length": 0}).json().get("data", []))
     total_page = max((total + page_size - 1) // page_size, 1)
+
+    # Enrich each row with QI status (single batch request)
+    qi_names = [r["reference_name"] for r in data if r.get("reference_name")]
+    if qi_names:
+        qi_res = requests.get(
+            f"{FRAPPE_URL}/api/resource/Quality Inspection",
+            headers=HEADERS,
+            params={
+                "fields": json.dumps(["name", "status"]),
+                "filters": json.dumps([["name", "in", qi_names]]),
+                "limit_page_length": len(qi_names),
+            },
+        )
+        qi_status_map = {q["name"]: q["status"] for q in qi_res.json().get("data", [])}
+        for r in data:
+            r["qi_status"] = qi_status_map.get(r.get("reference_name"), "")
 
     return {
         "data": data,

@@ -40,25 +40,6 @@ const NavigationBar = ({ children }: { children: React.ReactNode }) => {
       <SidebarProvider>
         <Sidebar>
           <SidebarContent>
-            {/* Dashboard */}
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <a href="#">
-                        <ChartNoAxesCombinedIcon />
-                        <span>Dashboard</span>
-                      </a>
-                    </SidebarMenuButton>
-                    <SidebarMenuBadge className="bg-primary/10 rounded-full">
-                      5
-                    </SidebarMenuBadge>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
             {/* Pages */}
             <SidebarGroup>
               <SidebarGroupLabel>Pages</SidebarGroupLabel>

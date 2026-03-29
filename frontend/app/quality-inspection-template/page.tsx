@@ -47,8 +47,8 @@ interface QIParameter {
 type ParameterRowForm = {
   specification: string;
   numeric: boolean;
-  minimum_value: string;
-  maximum_value: string;
+  min_value: string;
+  max_value: string;
 };
 
 type QITFormData = {
@@ -61,8 +61,8 @@ type QITFormData = {
 const paramRowSchema = z.object({
   specification: z.string().min(1, "Specification is required"),
   numeric: z.boolean(),
-  minimum_value: z.string().default(""),
-  maximum_value: z.string().default(""),
+  min_value: z.string().default(""),
+  max_value: z.string().default(""),
 });
 
 const templateSchema = z.object({
@@ -77,8 +77,8 @@ const templateSchema = z.object({
 const defaultParamRow = (): ParameterRowForm => ({
   specification: "",
   numeric: false,
-  minimum_value: "",
-  maximum_value: "",
+  min_value: "",
+  max_value: "",
 });
 
 const defaultFormData = (): QITFormData => ({
@@ -288,11 +288,11 @@ const Page = () => {
           result.data.item_quality_inspection_parameter.map((row) => ({
             specification: row.specification,
             numeric: row.numeric ? 1 : 0,
-            ...(row.minimum_value !== "" && {
-              minimum_value: parseFloat(row.minimum_value),
+            ...(row.min_value !== "" && {
+              min_value: parseFloat(row.min_value),
             }),
-            ...(row.maximum_value !== "" && {
-              maximum_value: parseFloat(row.maximum_value),
+            ...(row.max_value !== "" && {
+              max_value: parseFloat(row.max_value),
             }),
           })),
       };
@@ -331,15 +331,15 @@ const Page = () => {
           (row: {
             specification?: string;
             numeric?: number | boolean;
-            minimum_value?: number;
-            maximum_value?: number;
+            min_value?: number;
+            max_value?: number;
           }) => ({
             specification: row.specification ?? "",
             numeric: Boolean(row.numeric),
-            minimum_value:
-              row.minimum_value != null ? String(row.minimum_value) : "",
-            maximum_value:
-              row.maximum_value != null ? String(row.maximum_value) : "",
+            min_value:
+              row.min_value != null ? String(row.min_value) : "",
+            max_value:
+              row.max_value != null ? String(row.max_value) : "",
           }),
         ),
       });
@@ -397,13 +397,13 @@ const Page = () => {
         ...result.data,
         item_quality_inspection_parameter:
           result.data.item_quality_inspection_parameter.map((row) => ({
-            parameter: row.specification,
+            specification: row.specification,
             numeric: row.numeric ? 1 : 0,
-            ...(row.minimum_value !== "" && {
-              minimum_value: parseFloat(row.minimum_value),
+            ...(row.min_value !== "" && {
+              min_value: parseFloat(row.min_value),
             }),
-            ...(row.maximum_value !== "" && {
-              maximum_value: parseFloat(row.maximum_value),
+            ...(row.max_value !== "" && {
+              max_value: parseFloat(row.max_value),
             }),
           })),
       };
@@ -433,11 +433,11 @@ const Page = () => {
         name: t.name,
         quality_inspection_template_name: t.quality_inspection_template_name ?? "",
         item_quality_inspection_parameter: (t.item_quality_inspection_parameter ?? []).map(
-          (r: { specification?: string; numeric?: number | boolean; minimum_value?: number; maximum_value?: number }) => ({
+          (r: { specification?: string; numeric?: number | boolean; min_value?: number; max_value?: number }) => ({
             specification: r.specification ?? "",
             numeric: Boolean(r.numeric),
-            minimum_value: r.minimum_value != null ? String(r.minimum_value) : "",
-            maximum_value: r.maximum_value != null ? String(r.maximum_value) : "",
+            min_value: r.min_value != null ? String(r.min_value) : "",
+            max_value: r.max_value != null ? String(r.max_value) : "",
           }),
         ),
       });
@@ -559,9 +559,9 @@ const Page = () => {
                     <Input
                       type="number"
                       step="any"
-                      value={row.minimum_value}
+                      value={row.min_value}
                       onChange={(e) =>
-                        onRowChange(i, "minimum_value", e.target.value)
+                        onRowChange(i, "min_value", e.target.value)
                       }
                       placeholder="—"
                     />
@@ -570,9 +570,9 @@ const Page = () => {
                     <Input
                       type="number"
                       step="any"
-                      value={row.maximum_value}
+                      value={row.max_value}
                       onChange={(e) =>
-                        onRowChange(i, "maximum_value", e.target.value)
+                        onRowChange(i, "max_value", e.target.value)
                       }
                       placeholder="—"
                     />
@@ -646,8 +646,8 @@ const Page = () => {
                           <td className="p-2 text-center">
                             <input type="checkbox" checked={row.numeric} disabled className="h-4 w-4" />
                           </td>
-                          <td className="p-2"><Input value={row.minimum_value} disabled /></td>
-                          <td className="p-2"><Input value={row.maximum_value} disabled /></td>
+                          <td className="p-2"><Input value={row.min_value} disabled /></td>
+                          <td className="p-2"><Input value={row.max_value} disabled /></td>
                         </tr>
                       ))}
                     </tbody>

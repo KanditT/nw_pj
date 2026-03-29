@@ -1,4 +1,6 @@
 from fastapi import HTTPException, APIRouter, Query
+from pydantic import BaseModel
+from typing import Optional
 import requests
 import json
 
@@ -7,6 +9,32 @@ from config.config import FRAPPE_URL, HEADERS
 router = APIRouter()
 
 domain = "Purchase Receipt"
+
+
+# ── Doctype: Purchase Receipt ─────────────────────────────────────────────────
+# company, currency, conversion_rate are auto-filled by the backend
+
+class PurchaseReceiptItemIn(BaseModel):
+    """Child table: Purchase Receipt Item"""
+    item_code: str
+    qty: float
+    rate: float
+
+
+class PurchaseReceiptIn(BaseModel):
+    naming_series: str = "MAT-PRE-.YYYY.-"
+    supplier: str
+    posting_date: str           # YYYY-MM-DD
+    posting_time: str           # HH:MM:SS
+    items: list[PurchaseReceiptItemIn]
+
+
+class PurchaseReceiptUpdate(BaseModel):
+    naming_series: Optional[str] = None
+    supplier: Optional[str] = None
+    posting_date: Optional[str] = None
+    posting_time: Optional[str] = None
+    items: Optional[list[PurchaseReceiptItemIn]] = None
 
 
 @router.get("")
@@ -144,7 +172,7 @@ def mock_up_data():
 
 
 @router.post("")
-def create_purchase_receipt(data: dict):
+def create_purchase_receipt(data: PurchaseReceiptIn):
     try:
         company_res = requests.get(
             f"{FRAPPE_URL}/api/resource/Company",
@@ -154,16 +182,15 @@ def create_purchase_receipt(data: dict):
         companies = company_res.json().get("data", [])
         company = companies[0]["name"] if companies else ""
 
-        raw_items = data.pop("items", [])
-        items = [{"doctype": "Purchase Receipt Item", **item} for item in raw_items]
+        items = [{"doctype": "Purchase Receipt Item", **item.model_dump()} for item in data.items]
 
         payload = {
             "doctype": domain,
             "company": company,
             "currency": "THB",
             "conversion_rate": 1.00,
+            **data.model_dump(exclude={"items"}),
             "items": items,
-            **data
         }
 
         res = requests.post(
@@ -177,15 +204,18 @@ def create_purchase_receipt(data: dict):
 
 
 @router.put("/{name}")
-def update_purchase_receipt(name: str, data: dict):
+def update_purchase_receipt(name: str, data: PurchaseReceiptUpdate):
     try:
-        raw_items = data.pop("items", None)
-        if raw_items is not None:
-            data["items"] = [{"doctype": "Purchase Receipt Item", **item} for item in raw_items]
+        body = data.model_dump(exclude_none=True)
+        if "items" in body:
+            body["items"] = [
+                {"doctype": "Purchase Receipt Item", **item.model_dump()}
+                for item in (data.items or [])
+            ]
 
         res = requests.put(
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",
-            json=data,
+            json=body,
             headers=HEADERS
         )
         return res.json()

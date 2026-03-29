@@ -1,4 +1,6 @@
 from fastapi import HTTPException, APIRouter, Query
+from pydantic import BaseModel
+from typing import Optional
 import requests
 import json
 
@@ -7,6 +9,18 @@ from config.config import FRAPPE_URL, HEADERS
 router = APIRouter()
 
 domain = "Supplier"
+
+
+# ── Doctype: Supplier ─────────────────────────────────────────────────────────
+
+class SupplierIn(BaseModel):
+    supplier_name: str
+    supplier_type: str  # e.g. "Company", "Individual", "Partnership"
+
+
+class SupplierUpdate(BaseModel):
+    supplier_name: Optional[str] = None
+    supplier_type: Optional[str] = None
 
 
 @router.get("")
@@ -104,9 +118,9 @@ def mock_up_data():
 
 
 @router.post("")
-def create_supplier(data: dict):
+def create_supplier(data: SupplierIn):
     try:
-        payload = {"doctype": domain, **data}
+        payload = {"doctype": domain, **data.model_dump()}
         res = requests.post(
             f"{FRAPPE_URL}/api/resource/{domain}",
             json=payload,
@@ -118,11 +132,11 @@ def create_supplier(data: dict):
 
 
 @router.put("/{name}")
-def update_supplier(name: str, data: dict):
+def update_supplier(name: str, data: SupplierUpdate):
     try:
         res = requests.put(
             f"{FRAPPE_URL}/api/resource/{domain}/{name}",
-            json=data,
+            json=data.model_dump(exclude_none=True),
             headers=HEADERS
         )
         return res.json()

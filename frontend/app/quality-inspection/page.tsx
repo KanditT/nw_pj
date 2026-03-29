@@ -415,10 +415,13 @@ const Page = () => {
     }
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────
+  // ── Delete (cancel first, then delete — Frappe requires docstatus=2 before DELETE) ──
 
   async function handleDelete(name: string) {
     try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspections/${name}/cancel`,
+      );
       await axios.delete(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspections/${name}`,
       );
@@ -435,29 +438,69 @@ const Page = () => {
       { accessorKey: "name", header: "QI No." },
       { accessorKey: "item_code", header: "Item Code" },
       { accessorKey: "report_date", header: "Date" },
-      { accessorKey: "status", header: "Status" },
+      {
+        accessorKey: "status",
+        header: "QI Status",
+        cell: ({ row }) => {
+          const s = row.original.status;
+          const colors: Record<string, string> = {
+            Accepted: "bg-green-100 text-green-700",
+            Rejected: "bg-red-100 text-red-700",
+            Cancelled: "bg-gray-100 text-gray-500",
+          };
+          return (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[s] ?? "bg-yellow-100 text-yellow-700"}`}>
+              {s}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "docstatus",
+        header: "Doc Status",
+        cell: ({ row }) =>
+          row.original.docstatus === 2 ? (
+            <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-500">Cancelled</span>
+          ) : (
+            <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">Submitted</span>
+          ),
+      },
       { accessorKey: "inspected_by", header: "Inspected By" },
       {
         id: "actions",
         header: "Action",
-        cell: ({ row }) => (
-          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => handleCancel(row.original.name)}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => handleDelete(row.original.name)}
-            >
-              Delete
-            </Button>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const cancelled = row.original.docstatus === 2;
+          if (cancelled) return (
+            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}quality-inspections/${row.original.name}`).then(() => fetchData())}
+              >
+                Delete
+              </Button>
+            </div>
+          );
+          return (
+            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handleCancel(row.original.name)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => handleDelete(row.original.name)}
+              >
+                Delete
+              </Button>
+            </div>
+          );
+        },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps

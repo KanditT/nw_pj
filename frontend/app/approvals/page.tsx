@@ -41,6 +41,7 @@ interface ApprovalRequest {
   name: string;
   reference_name: string;
   status: string;
+  qi_status?: string;
   approved_by?: string;
   approved_at?: string;
   comment?: string;
@@ -66,6 +67,22 @@ interface QIDetail {
 }
 
 type Tab = "pending" | "history";
+
+// ── QI Status Badge ───────────────────────────────────────────────────────────
+
+function QIStatusBadge({ status }: { status?: string }) {
+  if (!status) return <span className="text-muted-foreground text-xs">—</span>;
+  const colors: Record<string, string> = {
+    Accepted: "bg-green-100 text-green-700",
+    Rejected: "bg-red-100 text-red-700",
+    Cancelled: "bg-gray-100 text-gray-500",
+  };
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-yellow-100 text-yellow-700"}`}>
+      {status}
+    </span>
+  );
+}
 
 // ── HeaderCheckbox — handles indeterminate state inside ColumnDef ─────────────
 
@@ -289,7 +306,12 @@ const Page = () => {
       },
       { accessorKey: "name", header: "Request No." },
       { accessorKey: "reference_name", header: "Quality Inspection" },
-      { accessorKey: "status", header: "Status" },
+      { accessorKey: "status", header: "Approval Status" },
+      {
+        accessorKey: "qi_status",
+        header: "QI Status",
+        cell: ({ row }) => <QIStatusBadge status={row.original.qi_status} />,
+      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pending, selected],
@@ -299,7 +321,12 @@ const Page = () => {
     () => [
       { accessorKey: "name", header: "Request No." },
       { accessorKey: "reference_name", header: "Quality Inspection" },
-      { accessorKey: "status", header: "Status" },
+      { accessorKey: "status", header: "Approval Status" },
+      {
+        accessorKey: "qi_status",
+        header: "QI Status",
+        cell: ({ row }) => <QIStatusBadge status={row.original.qi_status} />,
+      },
       { accessorKey: "approved_by", header: "Approved By" },
       {
         accessorKey: "comment",

@@ -1,4 +1,5 @@
 from fastapi import HTTPException, APIRouter, Query
+from pydantic import BaseModel
 import requests
 import json
 
@@ -6,6 +7,12 @@ from config.config import FRAPPE_URL, HEADERS
 
 router = APIRouter()
 domain = "Quality Inspection Parameter"
+
+
+# ── Doctype: Quality Inspection Parameter ────────────────────────────────────
+
+class QIParameterIn(BaseModel):
+    parameter: str  # parameter name, becomes the document `name` in Frappe
 
 
 @router.get("")
@@ -73,13 +80,9 @@ def get_all_parameters():
 
 MOCK_PARAMETERS = [
     "Dimension",
-    "Surface Finish",
     "Hardness",
     "Tensile Strength",
-    "Chemical Composition",
-    "Visual Inspection",
     "Weight",
-    "Corrosion Resistance",
     "Pressure Test",
     "Electrical Conductivity",
 ]
@@ -102,9 +105,9 @@ def mock_up_data():
 
 
 @router.post("")
-def create_parameter(data: dict):
+def create_parameter(data: QIParameterIn):
     try:
-        payload = {"doctype": domain, **data}
+        payload = {"doctype": domain, **data.model_dump()}
         res = requests.post(
             f"{FRAPPE_URL}/api/resource/{domain}",
             json=payload,

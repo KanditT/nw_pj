@@ -84,6 +84,20 @@ function QIStatusBadge({ status }: { status?: string }) {
   );
 }
 
+function ApprovalStatusBadge({ status }: { status?: string }) {
+  if (!status) return <span className="text-muted-foreground text-xs">—</span>;
+  const colors: Record<string, string> = {
+    Pending:  "bg-yellow-100 text-yellow-700",
+    Approved: "bg-green-100 text-green-700",
+    Rejected: "bg-red-100 text-red-700",
+  };
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-500"}`}>
+      {status}
+    </span>
+  );
+}
+
 // ── HeaderCheckbox — handles indeterminate state inside ColumnDef ─────────────
 
 function HeaderCheckbox({
@@ -306,7 +320,11 @@ const Page = () => {
       },
       { accessorKey: "name", header: "Request No." },
       { accessorKey: "reference_name", header: "Quality Inspection" },
-      { accessorKey: "status", header: "Approval Status" },
+      {
+        accessorKey: "status",
+        header: "Approval Status",
+        cell: ({ row }) => <ApprovalStatusBadge status={row.original.status} />,
+      },
       {
         accessorKey: "qi_status",
         header: "QI Status",
@@ -321,7 +339,11 @@ const Page = () => {
     () => [
       { accessorKey: "name", header: "Request No." },
       { accessorKey: "reference_name", header: "Quality Inspection" },
-      { accessorKey: "status", header: "Approval Status" },
+      {
+        accessorKey: "status",
+        header: "Approval Status",
+        cell: ({ row }) => <ApprovalStatusBadge status={row.original.status} />,
+      },
       {
         accessorKey: "qi_status",
         header: "QI Status",
